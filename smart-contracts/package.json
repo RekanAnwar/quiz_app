@@ -1,0 +1,46 @@
+{
+    "name": "quiz-app-contracts",
+    "version": "1.0.0",
+    "description": "Smart contracts for the Quiz App reward system",
+    "main": "hardhat.config.js",
+    "scripts": {
+        "compile": "hardhat compile",
+        "test": "hardhat test",
+        "deploy": "hardhat run scripts/deploy.js --network scrollSepolia",
+        "deploy-local": "hardhat run scripts/deploy.js --network hardhat",
+        "verify": "hardhat verify --network scrollSepolia",
+        "clean": "hardhat clean",
+        "coverage": "hardhat coverage"
+    },
+    "devDependencies": {
+        "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",
+        "@nomicfoundation/hardhat-ethers": "^3.0.4",
+        "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
+        "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+        "@nomicfoundation/hardhat-verify": "^1.1.1",
+        "@typechain/ethers-v6": "^0.4.3",
+        "@typechain/hardhat": "^8.0.3",
+        "@types/chai": "^4.3.5",
+        "@types/mocha": "^10.0.1",
+        "chai": "^4.3.7",
+        "ethers": "^6.7.1",
+        "hardhat": "^2.17.1",
+        "hardhat-gas-reporter": "^1.0.9",
+        "solidity-coverage": "^0.8.4",
+        "typechain": "^8.3.1"
+    },
+    "dependencies": {
+        "@openzeppelin/contracts": "^4.9.3",
+        "dotenv": "^16.3.1"
+    },
+    "keywords": [
+        "solidity",
+        "ethereum",
+        "smart-contracts",
+        "quiz-app",
+        "rewards",
+        "scroll"
+    ],
+    "author": "Quiz App Team",
+    "license": "MIT"
+}
