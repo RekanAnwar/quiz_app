@@ -23,23 +23,12 @@ class NumberGuessingApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             theme: _buildLightTheme(),
             darkTheme: _buildDarkTheme(),
-            themeMode: _getThemeMode(appProvider.themeMode),
+            themeMode: ThemeMode.system,
             home: const AppWrapper(),
           );
         },
       ),
     );
-  }
-
-  ThemeMode _getThemeMode(String themeMode) {
-    switch (themeMode) {
-      case 'light':
-        return ThemeMode.light;
-      case 'dark':
-        return ThemeMode.dark;
-      default:
-        return ThemeMode.system;
-    }
   }
 
   ThemeData _buildLightTheme() {

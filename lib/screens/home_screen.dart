@@ -28,15 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Web3 Guessing Game'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => _showSettingsModal(context),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Web3 Guessing Game')),
       body: Consumer<AppProvider>(
         builder: (context, appProvider, _) {
           return Padding(
@@ -388,71 +380,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  void _showSettingsModal(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (BuildContext context) {
-        return Consumer<AppProvider>(
-          builder: (context, appProvider, _) {
-            return Padding(
-              padding: const EdgeInsets.all(AppConstants.defaultPadding),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Settings',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  ListTile(
-                    title: const Text('App Theme'),
-                    leading: const Icon(Icons.brightness_6),
-                    trailing: DropdownButton<String>(
-                      value: appProvider.themeMode,
-                      onChanged: (String? newValue) {
-                        if (newValue != null) {
-                          appProvider.updateThemeMode(newValue);
-                        }
-                      },
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'system',
-                          child: Text('System'),
-                        ),
-                        DropdownMenuItem(value: 'light', child: Text('Light')),
-                        DropdownMenuItem(value: 'dark', child: Text('Dark')),
-                      ],
-                    ),
-                  ),
-                  SwitchListTile(
-                    title: const Text('Notifications'),
-                    subtitle: const Text('Enable push notifications'),
-                    value: appProvider.notificationsEnabled,
-                    onChanged: (bool value) {
-                      appProvider.updateNotificationsEnabled(value);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  Center(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Close'),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
     );
   }
 

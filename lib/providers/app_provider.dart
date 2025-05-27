@@ -25,10 +25,6 @@ class AppProvider with ChangeNotifier {
   bool _isGameInProgress = false;
   GameResult? _lastGameResult;
 
-  // Settings
-  String _themeMode = 'system';
-  bool _notificationsEnabled = true;
-
   // Getters
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -48,10 +44,6 @@ class AppProvider with ChangeNotifier {
   // Game getters
   bool get isGameInProgress => _isGameInProgress;
   GameResult? get lastGameResult => _lastGameResult;
-
-  // Settings getters
-  String get themeMode => _themeMode;
-  bool get notificationsEnabled => _notificationsEnabled;
 
   // Initialize the app
   Future<void> initialize() async {
@@ -84,10 +76,6 @@ class AppProvider with ChangeNotifier {
       if (savedAddress != null) {
         await connectWallet(savedAddress, updateBalance: true);
       }
-
-      // Load settings
-      _themeMode = await _storageService.getThemeMode();
-      _notificationsEnabled = await _storageService.getNotificationsEnabled();
 
       // Check for incomplete game
       await _checkForIncompleteGame();
@@ -290,19 +278,6 @@ class AppProvider with ChangeNotifier {
     _isGameInProgress = false;
     _lastGameResult = null;
     await _storageService.clearTemporaryGameState();
-    notifyListeners();
-  }
-
-  // Update settings
-  Future<void> updateThemeMode(String themeMode) async {
-    _themeMode = themeMode;
-    await _storageService.setThemeMode(themeMode);
-    notifyListeners();
-  }
-
-  Future<void> updateNotificationsEnabled(bool enabled) async {
-    _notificationsEnabled = enabled;
-    await _storageService.setNotificationsEnabled(enabled);
     notifyListeners();
   }
 
