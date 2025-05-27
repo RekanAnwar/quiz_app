@@ -24,9 +24,9 @@ class AppConstants {
   // Storage Keys
   static const String walletAddressKey = 'wallet_address';
 
-  // Contract Configuration - TODO: Update with deployed contract addresses
+  // Contract Configuration - Updated with deployed contract addresses
   static const String guessTokenContractAddress =
-      '0x716666A410b13846f86fa693313f76C22fFfF637'; // GuessToken (ERC-20)
+      '0x552528d609a8cb5D98a0E89439073A05e47B8527'; // GuessToken (ERC-20)
   static const String gameContractAddress =
-      '0x1Db0fBAd7898103a9D57E86a89D288554Efc3523'; // NumberGuessingGame
+      '0x730cFa3b471565Bf343534153Ce8895F44d35be4'; // NumberGuessingGame
 }

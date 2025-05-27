@@ -82,7 +82,7 @@ class AppProvider with ChangeNotifier {
       // Load wallet address
       final savedAddress = await _storageService.getWalletAddress();
       if (savedAddress != null) {
-        await connectWallet(savedAddress, updateBalance: false);
+        await connectWallet(savedAddress, updateBalance: true);
       }
 
       // Load settings
@@ -216,22 +216,43 @@ class AppProvider with ChangeNotifier {
       _setLoading(true);
       _setError(null);
 
-      // TODO: Implement playNumberGuessingGame in Web3Service
       // Call the smart contract to play the game
-      // final result = await _web3Service.playNumberGuessingGame(guess);
+      final txHash = await _web3Service.playGame(guess);
 
-      // For now, create a mock result
-      final targetNumber =
-          DateTime.now().microsecond % 101; // Mock random 0-100
-      final difference = (guess - targetNumber).abs();
-      final rewardAmount = _calculateMockReward(difference);
+      // Wait for transaction confirmation
+      bool isConfirmed = false;
+      int attempts = 0;
+      const maxAttempts = 30; // Wait up to 30 seconds
+
+      while (!isConfirmed && attempts < maxAttempts) {
+        await Future.delayed(const Duration(seconds: 1));
+        isConfirmed = await _web3Service.isTransactionConfirmed(txHash!);
+        attempts++;
+      }
+
+      if (!isConfirmed) {
+        throw Exception(
+          'Transaction not confirmed after timeout. Check Etherscan: $txHash',
+        );
+      }
+
+      // Wait a moment for blockchain state to update
+      await Future.delayed(const Duration(seconds: 2));
+
+      // Get the latest game result
+      final latestResult = await _web3Service.getLatestGameResult();
+      if (latestResult == null) {
+        throw Exception('Could not retrieve game result from blockchain');
+      }
 
       final result = GameResult(
-        targetNumber: targetNumber,
-        userGuess: guess,
-        difference: difference,
-        rewardAmount: rewardAmount,
-        timestamp: DateTime.now(),
+        targetNumber: latestResult['targetNumber'] as int,
+        userGuess: latestResult['userGuess'] as int,
+        difference: latestResult['difference'] as int,
+        rewardAmount: latestResult['rewardAmount'] as double,
+        timestamp: DateTime.fromMillisecondsSinceEpoch(
+          (latestResult['timestamp'] as int) * 1000,
+        ),
       );
 
       _lastGameResult = result;
@@ -248,26 +269,6 @@ class AppProvider with ChangeNotifier {
       _setError('Failed to play game: $e');
     } finally {
       _setLoading(false);
-    }
-  }
-
-  // Calculate mock reward (matches smart contract logic)
-  double _calculateMockReward(int difference) {
-    const baseReward = 10.0;
-    if (difference == 0) {
-      return baseReward + 40.0; // Perfect guess
-    } else if (difference <= 5) {
-      return baseReward + (baseReward * 0.75); // Very close
-    } else if (difference <= 10) {
-      return baseReward + (baseReward * 0.5); // Close
-    } else if (difference <= 20) {
-      return baseReward + (baseReward * 0.25); // Moderate
-    } else if (difference <= 30) {
-      return baseReward; // Fair
-    } else if (difference <= 40) {
-      return baseReward / 2; // Poor
-    } else {
-      return baseReward / 4; // Very poor
     }
   }
 

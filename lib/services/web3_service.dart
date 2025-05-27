@@ -1,6 +1,5 @@
 // ignore_for_file: unused_field, depend_on_referenced_packages
 
-import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:math';
 
@@ -11,7 +10,7 @@ import 'package:web3dart/web3dart.dart';
 import '../constants/app_constants.dart';
 import '../contracts/contract_config.dart';
 import '../contracts/erc20_abi.dart';
-import '../contracts/reward_contract_abi.dart';
+import '../contracts/game_contract_abi.dart';
 
 class Web3Service {
   static final Web3Service _instance = Web3Service._internal();
@@ -23,17 +22,23 @@ class Web3Service {
 
   // Contract instances
   DeployedContract? _tokenContract;
-  DeployedContract? _rewardContract;
+  DeployedContract? _gameContract;
 
-  // Contract functions
+  // Token contract functions
   ContractFunction? _balanceOfFunction;
-  ContractFunction? _hasClaimedRewardFunction;
-  ContractFunction? _distributeRewardFunction;
-  ContractFunction? _getUserRewardsFunction;
+  ContractFunction? _transferFunction;
+
+  // Game contract functions
+  ContractFunction? _playGameFunction;
+  ContractFunction? _getUserTotalRewardsFunction;
+  ContractFunction? _getUserTotalGamesFunction;
+  ContractFunction? _getUserGameHistoryFunction;
+  ContractFunction? _getLatestGameResultFunction;
+  ContractFunction? _pausedFunction;
 
   // Check if the service is properly initialized
   bool get isInitialized =>
-      _web3Client != null && _tokenContract != null && _rewardContract != null;
+      _web3Client != null && _tokenContract != null && _gameContract != null;
 
   // Ensure service is initialized (throws exception if not)
   void _ensureInitialized() {
@@ -42,7 +47,7 @@ class Web3Service {
         'Web3 client not initialized. Please call initialize() first.',
       );
     }
-    if (_tokenContract == null || _rewardContract == null) {
+    if (_tokenContract == null || _gameContract == null) {
       throw Exception(
         'Smart contracts not initialized. Please check contract configuration.',
       );
@@ -122,100 +127,50 @@ class Web3Service {
     }
   }
 
-  // Check if user has already claimed reward for a specific game category
-  Future<bool> hasClaimedReward(String gameCategory) async {
-    if (_userAddress == null) return false;
-
-    try {
-      _ensureInitialized();
-
-      final address = EthereumAddress.fromHex(_userAddress!);
-      final result = await _web3Client!.call(
-        contract: _rewardContract!,
-        function: _hasClaimedRewardFunction!,
-        params: [address, gameCategory],
-      );
-
-      final bool hasClaimed = result.first as bool;
-      developer.log('Has claimed reward for $gameCategory: $hasClaimed');
-
-      return hasClaimed;
-    } catch (e) {
-      developer.log('Error checking claimed reward: $e');
-      return false;
-    }
-  }
-
-  // Distribute token reward (real implementation)
-  Future<String?> distributeReward(String gameCategory, double amount) async {
+  // Play the number guessing game
+  Future<String?> playGame(int guess) async {
     if (_userAddress == null) {
       throw Exception('No wallet connected');
     }
 
     try {
       _ensureInitialized();
-      developer.log(
-        'Distributing $amount tokens to $_userAddress for $gameCategory game',
-      );
+      developer.log('Playing game with guess: $guess');
 
-      // Check if user has already claimed this reward
-      final hasClaimed = await hasClaimedReward(gameCategory);
-      if (hasClaimed) {
-        throw Exception('Reward for $gameCategory has already been claimed');
+      // Check if game is paused
+      final result = await _web3Client!.call(
+        contract: _gameContract!,
+        function: _pausedFunction!,
+        params: [],
+      );
+      final bool isPaused = result.first as bool;
+
+      if (isPaused) {
+        throw Exception('Game is currently paused');
       }
 
-      // Check if RewardDistributor has minter role on GuessToken
-      await _checkMinterPermissions();
-
-      // For production: This should be called from a secure backend service
-      // Here we show the contract call structure, but the actual signing would need
-      // to be done server-side with the reward distributor's private key
-
+      // Get credentials (this should be handled by MetaMask in production)
       if (ContractConfig.gameManagerPrivateKey == 'YOUR_PRIVATE_KEY_HERE') {
         throw Exception(
-          'Reward distribution requires backend service. '
-          'Please configure a secure backend for reward distribution.',
+          'Game play requires user wallet connection. '
+          'Please connect your MetaMask wallet.',
         );
       }
 
-      // Get credentials for the reward distributor
       final credentials = EthPrivateKey.fromHex(
         ContractConfig.gameManagerPrivateKey,
       );
-      final distributorAddress = credentials.address;
-      developer.log('Distributor address: $distributorAddress');
-
-      // Check distributor ETH balance
-      final distributorBalance = await _web3Client!.getBalance(
-        distributorAddress,
-      );
-      developer.log(
-        'Distributor ETH balance: ${distributorBalance.getValueInUnit(EtherUnit.ether)} ETH',
-      );
 
       // Prepare the transaction
-      final userAddress = EthereumAddress.fromHex(_userAddress!);
-
-      developer.log('Transaction details:');
-      developer.log('- User: $userAddress');
-      developer.log('- Category: $gameCategory');
-      developer.log('- Fixed reward amount: 10 GUESS tokens (set in contract)');
-
-      // Call the distributeReward function (only 2 parameters: user, category)
       final transaction = Transaction.callContract(
-        contract: _rewardContract!,
-        function: _distributeRewardFunction!,
-        parameters: [
-          userAddress,
-          gameCategory,
-        ], // Removed rewardAmount parameter
-        maxGas: 500000, // Increased gas limit
+        contract: _gameContract!,
+        function: _playGameFunction!,
+        parameters: [BigInt.from(guess)],
+        maxGas: 300000,
         gasPrice: EtherAmount.inWei(BigInt.from(20000000000)), // 20 gwei
       );
 
-      developer.log(
-        'Sending transaction with gas limit: 500000, gas price: 20 gwei',
-      );
+      developer.log('Sending play game transaction...');
 
       // Send the transaction
       final txHash = await _web3Client!.sendTransaction(
@@ -224,28 +179,97 @@ class Web3Service {
         chainId: ContractConfig.chainId,
       );
 
-      developer.log('✅ Reward distribution transaction sent: $txHash');
+      developer.log('✅ Game transaction sent: $txHash');
       return txHash;
     } catch (e) {
-      developer.log('❌ Error distributing reward: $e');
-
-      // Check for common revert reasons
-      String errorMessage = e.toString();
-      if (errorMessage.contains('already claimed')) {
-        throw Exception('Reward already claimed for $gameCategory category');
-      } else if (errorMessage.contains('not minter')) {
-        throw Exception('Distributor address is not authorized as minter');
-      } else if (errorMessage.contains('paused')) {
-        throw Exception('Contract is currently paused');
-      } else if (errorMessage.contains('insufficient funds')) {
-        throw Exception('Insufficient ETH for gas fees');
-      } else {
-        throw Exception('Transaction failed: $errorMessage');
-      }
+      developer.log('❌ Error playing game: $e');
+      throw Exception('Game transaction failed: $e');
     }
   }
 
-  // Get transaction status (real implementation)
+  // Get user's total rewards
+  Future<double> getUserTotalRewards() async {
+    if (_userAddress == null) return 0.0;
+
+    try {
+      _ensureInitialized();
+
+      final address = EthereumAddress.fromHex(_userAddress!);
+      final result = await _web3Client!.call(
+        contract: _gameContract!,
+        function: _getUserTotalRewardsFunction!,
+        params: [address],
+      );
+
+      final BigInt rewards = result.first as BigInt;
+      final double totalRewards = rewards.toDouble() / pow(10, 18);
+
+      developer.log('User Total Rewards: $totalRewards');
+      return totalRewards;
+    } catch (e) {
+      developer.log('Error getting user total rewards: $e');
+      return 0.0;
+    }
+  }
+
+  // Get user's total games played
+  Future<int> getUserTotalGames() async {
+    if (_userAddress == null) return 0;
+
+    try {
+      _ensureInitialized();
+
+      final address = EthereumAddress.fromHex(_userAddress!);
+      final result = await _web3Client!.call(
+        contract: _gameContract!,
+        function: _getUserTotalGamesFunction!,
+        params: [address],
+      );
+
+      final BigInt games = result.first as BigInt;
+      final int totalGames = games.toInt();
+
+      developer.log('User Total Games: $totalGames');
+      return totalGames;
+    } catch (e) {
+      developer.log('Error getting user total games: $e');
+      return 0;
+    }
+  }
+
+  // Get user's latest game result
+  Future<Map<String, dynamic>?> getLatestGameResult() async {
+    if (_userAddress == null) return null;
+
+    try {
+      _ensureInitialized();
+
+      final address = EthereumAddress.fromHex(_userAddress!);
+      final result = await _web3Client!.call(
+        contract: _gameContract!,
+        function: _getLatestGameResultFunction!,
+        params: [address],
+      );
+
+      if (result.isNotEmpty) {
+        final gameResult = result.first as List;
+
+        return {
+          'targetNumber': (gameResult[0] as BigInt).toInt(),
+          'userGuess': (gameResult[1] as BigInt).toInt(),
+          'difference': (gameResult[2] as BigInt).toInt(),
+          'rewardAmount': (gameResult[3] as BigInt).toDouble() / pow(10, 18),
+          'timestamp': (gameResult[4] as BigInt).toInt(),
+        };
+      }
+      return null;
+    } catch (e) {
+      developer.log('Error getting latest game result: $e');
+      return null;
+    }
+  }
+
+  // Get transaction status
   Future<bool> isTransactionConfirmed(String txHash) async {
     if (_web3Client == null) return false;
 
@@ -304,7 +328,7 @@ class Web3Service {
     _userAddress = null;
   }
 
-  // Check if the current network is Ethereum Sepolia (real implementation)
+  // Check if the current network is Ethereum Sepolia
   Future<bool> isOnEthereumSepolia() async {
     if (_web3Client == null) return false;
 
@@ -326,41 +350,11 @@ class Web3Service {
     }
   }
 
-  // Request to switch to Ethereum Sepolia network (MetaMask deep link)
-  Future<bool> switchToEthereumSepolia() async {
-    try {
-      // Note: Network switching in Flutter requires MetaMask mobile app or browser extension
-      // This creates a deep link to MetaMask to request network switch
-
-      developer.log('Requesting network switch to Ethereum Sepolia');
-
-      // Create MetaMask deep link for network switching
-      final networkSwitchUrl =
-          'https://metamask.app.link/send/pay'
-          '?chainId=${AppConstants.sepoliaChainId.toRadixString(16)}'
-          '&rpcUrl=${Uri.encodeComponent(AppConstants.sepoliaRpcUrl)}'
-          '&blockExplorerUrl=${Uri.encodeComponent(AppConstants.sepoliaExplorer)}'
-          '&networkName=${Uri.encodeComponent('Ethereum Sepolia')}'
-          '&nativeCurrency=ETH';
-
-      developer.log('Network switch URL: $networkSwitchUrl');
-
-      // In a real app, you would use url_launcher to open this URL
-      // For now, we'll just log it and assume success after user switches manually
-      developer.log('Please switch to Ethereum Sepolia network in MetaMask');
-
-      return true;
-    } catch (e) {
-      developer.log('Error requesting network switch: $e');
-      return false;
-    }
-  }
-
-  // Estimate gas fee for a reward distribution transaction (real implementation)
+  // Estimate gas fee for a game transaction
   Future<double> estimateGasFee() async {
     if (_web3Client == null ||
-        _rewardContract == null ||
-        _distributeRewardFunction == null) {
+        _gameContract == null ||
+        _playGameFunction == null) {
       return 0.0;
     }
 
@@ -368,10 +362,8 @@ class Web3Service {
       // Get current gas price
       final gasPrice = await _web3Client!.getGasPrice();
 
-      // Estimate gas for a typical reward distribution transaction
-      // We'll use a sample transaction to estimate gas usage
-      final estimatedGasLimit =
-          200000; // Typical gas limit for reward distribution
+      // Estimate gas for a typical game transaction
+      final estimatedGasLimit = 300000; // Typical gas limit for playGame
 
       // Calculate total gas fee in Wei
       final gasFeeWei = gasPrice.getInWei * BigInt.from(estimatedGasLimit);
@@ -384,209 +376,6 @@ class Web3Service {
     } catch (e) {
       developer.log('Error estimating gas fee: $e');
       return 0.0;
-    }
-  }
-
-  // Get wallet connection URL for MetaMask deep linking
-  String getMetaMaskConnectionUrl() {
-    return 'https://metamask.app.link/dapp/guess-game.example.com';
-  }
-
-  // Get current block number
-  Future<int> getCurrentBlockNumber() async {
-    if (_web3Client == null) return 0;
-
-    try {
-      final blockNumber = await _web3Client!.getBlockNumber();
-      developer.log('Current block number: $blockNumber');
-      return blockNumber;
-    } catch (e) {
-      developer.log('Error getting block number: $e');
-      return 0;
-    }
-  }
-
-  // Get transaction details
-  Future<Map<String, dynamic>?> getTransactionDetails(String txHash) async {
-    if (_web3Client == null) return null;
-
-    try {
-      final transaction = await _web3Client!.getTransactionByHash(txHash);
-      final receipt = await _web3Client!.getTransactionReceipt(txHash);
-
-      if (transaction == null) return null;
-
-      return {
-        'hash': transaction.hash,
-        'from': transaction.from.toString(),
-        'to': transaction.to?.toString(),
-        'value': transaction.value.getValueInUnit(EtherUnit.ether),
-        'gasPrice': transaction.gasPrice.getValueInUnit(EtherUnit.gwei),
-        'gas': transaction.gas,
-        'blockNumber': receipt?.blockNumber.blockNum,
-        'status': receipt?.status,
-        'gasUsed': receipt?.gasUsed,
-      };
-    } catch (e) {
-      developer.log('Error getting transaction details: $e');
-      return null;
-    }
-  }
-
-  // Get user's game statistics from contract
-  Future<Map<String, dynamic>> getGameStatistics() async {
-    if (_userAddress == null) return {};
-
-    try {
-      _ensureInitialized();
-      // TODO: Implement actual contract calls to NumberGuessingGame
-      // For now, return empty statistics
-      final stats = <String, dynamic>{
-        'totalGames': 0,
-        'totalRewards': 0.0,
-        'averageAccuracy': 0.0,
-      };
-
-      developer.log('Game statistics: $stats');
-      return stats;
-    } catch (e) {
-      developer.log('Error getting game statistics: $e');
-      return {};
-    }
-  }
-
-  // Get total rewards earned by user
-  Future<double> getTotalRewardsEarned() async {
-    if (_userAddress == null) return 0.0;
-
-    try {
-      // TODO: Implement actual contract call to get user's total rewards
-      // For now, return 0 as placeholder until game contract integration
-      final totalRewards = 0.0;
-
-      developer.log('Total rewards earned: $totalRewards GUESS');
-      return totalRewards;
-    } catch (e) {
-      developer.log('Error calculating total rewards: $e');
-      return 0.0;
-    }
-  }
-
-  // Check if contract is properly configured and accessible
-  Future<bool> validateContractSetup() async {
-    try {
-      _ensureInitialized();
-
-      // Test token contract
-      final deployerAddress = EthereumAddress.fromHex(
-        '0xA720e09cfB31fcd03d74992373AEcF0818F111Af',
-      );
-      final balanceResult = await _web3Client!.call(
-        contract: _tokenContract!,
-        function: _balanceOfFunction!,
-        params: [deployerAddress],
-      );
-
-      developer.log(
-        'Token contract test: SUCCESS - Deployer balance: ${balanceResult.first}',
-      );
-
-      // Test reward contract (check if we can call hasClaimedReward)
-      final claimResult = await _web3Client!.call(
-        contract: _rewardContract!,
-        function: _hasClaimedRewardFunction!,
-        params: [deployerAddress, 'Blockchain'],
-      );
-
-      developer.log(
-        'Reward contract test: SUCCESS - Has claimed: ${claimResult.first}',
-      );
-      developer.log('Contract setup validation: SUCCESS');
-      return true;
-    } catch (e) {
-      developer.log('Contract setup validation: FAILED - $e');
-      return false;
-    }
-  }
-
-  // Get detailed initialization status
-  Map<String, dynamic> getInitializationStatus() {
-    return {
-      'web3ClientInitialized': _web3Client != null,
-      'tokenContractInitialized': _tokenContract != null,
-      'rewardContractInitialized': _rewardContract != null,
-      'balanceOfFunctionReady': _balanceOfFunction != null,
-      'hasClaimedRewardFunctionReady': _hasClaimedRewardFunction != null,
-      'distributeRewardFunctionReady': _distributeRewardFunction != null,
-      'userRewardsFunctionReady': _getUserRewardsFunction != null,
-      'isFullyInitialized': isInitialized,
-    };
-  }
-
-  // Check if RewardDistributor has minter permissions on GuessToken
-  Future<void> _checkMinterPermissions() async {
-    try {
-      // Get the RewardDistributor contract address
-      final rewardContractAddress = _rewardContract!.address;
-
-      // Create a simple function call to check if the reward contract has minter role
-      // This assumes the GuessToken has a "hasRole" or similar function
-      developer.log(
-        'Checking if RewardDistributor ($rewardContractAddress) has minter permissions...',
-      );
-
-      // For now, we'll skip this check and let the transaction fail with a better error message
-      // The actual check would require the MINTER_ROLE constant and hasRole function
-      developer.log(
-        '⚠️ Minter permission check skipped - will be verified during transaction',
-      );
-    } catch (e) {
-      developer.log('Warning: Could not verify minter permissions: $e');
-    }
-  }
-
-  // Alternative backend-based reward distribution (recommended for production)
-  Future<String?> distributeRewardViaBackend(
-    String gameCategory,
-    double amount,
-  ) async {
-    if (_userAddress == null) {
-      throw Exception('No wallet connected');
-    }
-
-    try {
-      developer.log('Distributing reward via backend API...');
-
-      final response = await http.post(
-        Uri.parse(
-          '${ContractConfig.backendApiUrl}${ContractConfig.gamePlayEndpoint}',
-        ),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'userAddress': _userAddress,
-          'gameCategory': gameCategory,
-          'amount': amount,
-          'timestamp': DateTime.now().millisecondsSinceEpoch,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final txHash = data['transactionHash'] as String?;
-
-        if (txHash != null) {
-          developer.log('Reward distributed via backend: $txHash');
-          return txHash;
-        } else {
-          throw Exception('No transaction hash returned from backend');
-        }
-      } else {
-        final error = jsonDecode(response.body)['error'] ?? 'Backend error';
-        throw Exception('Backend API error: $error');
-      }
-    } catch (e) {
-      developer.log('Error distributing reward via backend: $e');
-      rethrow;
     }
   }
 
@@ -649,33 +438,41 @@ class Web3Service {
           EthereumAddress.fromHex(ContractConfig.guessTokenContractAddress),
         );
         _balanceOfFunction = _tokenContract!.function('balanceOf');
+        _transferFunction = _tokenContract!.function('transfer');
         developer.log('Token contract initialized successfully');
       } catch (e) {
         developer.log('Error initializing token contract: $e');
         throw Exception('Failed to initialize token contract: $e');
       }
 
-      // Initialize reward contract
+      // Initialize game contract
       try {
-        final rewardAbi = ContractAbi.fromJson(
-          rewardContractAbi,
-          'RewardContract',
+        final gameAbi = ContractAbi.fromJson(
+          gameContractAbi,
+          'NumberGuessingGame',
         );
-        _rewardContract = DeployedContract(
-          rewardAbi,
+        _gameContract = DeployedContract(
+          gameAbi,
           EthereumAddress.fromHex(ContractConfig.gameContractAddress),
         );
-        _hasClaimedRewardFunction = _rewardContract!.function(
-          'hasClaimedReward',
+        _playGameFunction = _gameContract!.function('playGame');
+        _getUserTotalRewardsFunction = _gameContract!.function(
+          'getUserTotalRewards',
         );
-        _distributeRewardFunction = _rewardContract!.function(
-          'distributeReward',
+        _getUserTotalGamesFunction = _gameContract!.function(
+          'getUserTotalGames',
         );
-        _getUserRewardsFunction = _rewardContract!.function('getUserRewards');
-        developer.log('Reward contract initialized successfully');
+        _getUserGameHistoryFunction = _gameContract!.function(
+          'getUserGameHistory',
+        );
+        _getLatestGameResultFunction = _gameContract!.function(
+          'getLatestGameResult',
+        );
+        _pausedFunction = _gameContract!.function('paused');
+        developer.log('Game contract initialized successfully');
       } catch (e) {
-        developer.log('Error initializing reward contract: $e');
-        throw Exception('Failed to initialize reward contract: $e');
+        developer.log('Error initializing game contract: $e');
+        throw Exception('Failed to initialize game contract: $e');
       }
 
       developer.log('All smart contracts initialized successfully');
@@ -683,6 +480,20 @@ class Web3Service {
       developer.log('Error initializing contracts: $e');
       rethrow; // Rethrow to let the caller handle this error
     }
+  }
+
+  // Get detailed initialization status
+  Map<String, dynamic> getInitializationStatus() {
+    return {
+      'web3ClientInitialized': _web3Client != null,
+      'tokenContractInitialized': _tokenContract != null,
+      'gameContractInitialized': _gameContract != null,
+      'balanceOfFunctionReady': _balanceOfFunction != null,
+      'playGameFunctionReady': _playGameFunction != null,
+      'getUserTotalRewardsFunctionReady': _getUserTotalRewardsFunction != null,
+      'getUserTotalGamesFunctionReady': _getUserTotalGamesFunction != null,
+      'isFullyInitialized': isInitialized,
+    };
   }
 
   // Dispose resources
