@@ -4,7 +4,6 @@ import 'dart:developer' as developer;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/app_constants.dart';
-import '../models/models.dart';
 
 class StorageService {
   static final StorageService _instance = StorageService._internal();
@@ -67,77 +66,6 @@ class StorageService {
   Future<bool> getNotificationsEnabled() async {
     await initialize();
     return _prefs.getBool('notifications_enabled') ?? true;
-  }
-
-  // Game history management
-  Future<bool> saveGameHistory(
-    String walletAddress,
-    List<GameResult> gameHistory,
-  ) async {
-    await initialize();
-
-    try {
-      final gameHistoryData = gameHistory.map((game) => game.toMap()).toList();
-      final jsonString = json.encode(gameHistoryData);
-      return await _prefs.setString('game_history_$walletAddress', jsonString);
-    } catch (e) {
-      developer.log('Error saving game history: $e');
-      return false;
-    }
-  }
-
-  Future<List<GameResult>> getGameHistory(String walletAddress) async {
-    await initialize();
-    final jsonString = _prefs.getString('game_history_$walletAddress');
-    if (jsonString == null) return [];
-
-    try {
-      final List<dynamic> gameHistoryData = json.decode(jsonString);
-      return gameHistoryData.map((data) => GameResult.fromMap(data)).toList();
-    } catch (e) {
-      developer.log('Error parsing game history: $e');
-      return [];
-    }
-  }
-
-  // Game statistics management
-  Future<Map<String, dynamic>> getGameStatistics(String walletAddress) async {
-    await initialize();
-    final gameHistory = await getGameHistory(walletAddress);
-
-    if (gameHistory.isEmpty) {
-      return {
-        'totalGames': 0,
-        'totalRewards': 0.0,
-        'averageAccuracy': 0.0,
-        'bestGuess': 0,
-        'perfectGuesses': 0,
-      };
-    }
-
-    final totalGames = gameHistory.length;
-    final totalRewards = gameHistory.fold<double>(
-      0.0,
-      (sum, game) => sum + game.rewardAmount,
-    );
-    final totalDifference = gameHistory.fold<int>(
-      0,
-      (sum, game) => sum + game.difference,
-    );
-    final averageAccuracy = totalDifference / totalGames;
-    final bestGuess = gameHistory
-        .map((game) => game.difference)
-        .reduce((a, b) => a < b ? a : b);
-    final perfectGuesses =
-        gameHistory.where((game) => game.difference == 0).length;
-
-    return {
-      'totalGames': totalGames,
-      'totalRewards': totalRewards,
-      'averageAccuracy': averageAccuracy,
-      'bestGuess': bestGuess,
-      'perfectGuesses': perfectGuesses,
-    };
   }
 
   // Temporary game state management (for in-progress games)
@@ -213,7 +141,7 @@ class StorageService {
     await initialize();
     try {
       await removeWalletAddress();
-      // Clear all game history keys
+
       final keys = _prefs.getKeys();
       for (String key in keys) {
         if (key.startsWith('game_history_')) {

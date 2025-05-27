@@ -183,52 +183,6 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildGameResultSection(appProvider)
           else
             _buildStartGameSection(appProvider),
-
-          // Game history
-          if (appProvider.gameHistory.isNotEmpty)
-            Card(
-              margin: const EdgeInsets.only(top: 16),
-              child: Padding(
-                padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Recent Games',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: appProvider.gameHistory.length.clamp(0, 5),
-                      itemBuilder: (context, index) {
-                        final game = appProvider.gameHistory[index];
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                            'Guess: ${game.userGuess} • Target: ${game.targetNumber}',
-                          ),
-                          subtitle: Text(
-                            '${_formatTimestamp(game.timestamp)} • Reward: ${game.rewardAmount} TOKEN',
-                          ),
-                          leading: CircleAvatar(
-                            backgroundColor: _getResultColor(game),
-                            child: Text(
-                              game.difference.toString(),
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -328,10 +282,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     onPressed:
                         appProvider.isLoading
                             ? null
-                            : () {
+                            : () async {
                               if (_formKey.currentState!.validate()) {
                                 final guess = int.parse(_guessController.text);
-                                appProvider.playGame(guess);
+
+                                await appProvider.playGame(guess);
+
+                                _guessController.clear();
                               }
                             },
                     icon:
@@ -514,9 +471,5 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       return Colors.red;
     }
-  }
-
-  String _formatTimestamp(DateTime timestamp) {
-    return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
   }
 }

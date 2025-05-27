@@ -25,10 +25,6 @@ class AppProvider with ChangeNotifier {
   bool _isGameInProgress = false;
   GameResult? _lastGameResult;
 
-  // User data
-  final List<GameResult> _gameHistory = [];
-  Map<String, dynamic> _userStats = {};
-
   // Settings
   String _themeMode = 'system';
   bool _notificationsEnabled = true;
@@ -52,10 +48,6 @@ class AppProvider with ChangeNotifier {
   // Game getters
   bool get isGameInProgress => _isGameInProgress;
   GameResult? get lastGameResult => _lastGameResult;
-
-  // User data getters
-  List<GameResult> get gameHistory => _gameHistory;
-  Map<String, dynamic> get userStats => _userStats;
 
   // Settings getters
   String get themeMode => _themeMode;
@@ -93,23 +85,9 @@ class AppProvider with ChangeNotifier {
         await connectWallet(savedAddress, updateBalance: false);
       }
 
-      // Load game history
-      if (_walletAddress != null) {
-        final gameHistory = await _storageService.getGameHistory(
-          _walletAddress!,
-        );
-        _gameHistory.clear();
-        _gameHistory.addAll(gameHistory);
-      }
-
       // Load settings
       _themeMode = await _storageService.getThemeMode();
       _notificationsEnabled = await _storageService.getNotificationsEnabled();
-
-      // Load user stats
-      if (_walletAddress != null) {
-        _userStats = await _storageService.getGameStatistics(_walletAddress!);
-      }
 
       // Check for incomplete game
       await _checkForIncompleteGame();
@@ -155,13 +133,6 @@ class AppProvider with ChangeNotifier {
         await _updateBalances();
       }
 
-      // Load game history and update user stats
-      final gameHistory = await _storageService.getGameHistory(address);
-      _gameHistory.clear();
-      _gameHistory.addAll(gameHistory);
-
-      _userStats = await _storageService.getGameStatistics(address);
-
       _setError(null);
       notifyListeners();
     } catch (e) {
@@ -178,8 +149,6 @@ class AppProvider with ChangeNotifier {
       _walletAddress = null;
       _ethBalance = 0.0;
       _tokenBalance = 0.0;
-      _userStats = {};
-      _gameHistory.clear();
 
       await _storageService.removeWalletAddress();
       await _storageService.clearUserData();
@@ -266,13 +235,6 @@ class AppProvider with ChangeNotifier {
       );
 
       _lastGameResult = result;
-      _gameHistory.add(result);
-
-      // Save updated game history
-      await _storageService.saveGameHistory(_walletAddress!, _gameHistory);
-
-      // Update user stats
-      _userStats = await _storageService.getGameStatistics(_walletAddress!);
 
       // Update balances
       await _updateBalances();
