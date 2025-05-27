@@ -9,7 +9,6 @@ class AppConstants {
   static const int minNumber = 0;
   static const int maxNumber = 100;
   static const double baseRewardAmount = 10.0;
-  static const double perfectBonusAmount = 40.0;
 
   // UI Constants
   static const double defaultPadding = 16.0;
@@ -17,9 +16,6 @@ class AppConstants {
 
   // Colors
   static const int primaryColorValue = 0xFF4CAF50;
-  static const int accentColorValue = 0xFF8BC34A;
-  static const int errorColorValue = 0xFFEF4444;
-  static const int warningColorValue = 0xFFF59E0B;
 
   // Storage Keys
   static const String walletAddressKey = 'wallet_address';
