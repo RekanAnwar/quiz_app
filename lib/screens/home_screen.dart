@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_provider.dart';
-import 'quiz_category_screen.dart';
 import 'settings_screen.dart';
 import 'wallet_connect_screen.dart';
 
@@ -15,7 +14,7 @@ class HomeScreen extends StatelessWidget {
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: Text(
-          'Quiz App',
+          'Number Guessing Game',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
@@ -86,7 +85,7 @@ class HomeScreen extends StatelessWidget {
                     _buildConnectWalletCard(context, appProvider),
                     const SizedBox(height: 24),
                   ],
-                  _buildQuizCategoriesSection(context, appProvider),
+                  _buildGameSection(context, appProvider),
                 ],
               ),
             ),
@@ -126,7 +125,7 @@ class HomeScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Hi, Learner!',
+                      'Hi, Player!',
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(
                             color: Colors.white,
@@ -134,7 +133,7 @@ class HomeScreen extends StatelessWidget {
                           ),
                     ),
                     Text(
-                      'Let\'s make this day productive',
+                      'Ready to test your guessing skills?',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.white.withValues(alpha: 0.9),
                       ),
@@ -167,7 +166,7 @@ class HomeScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${appProvider.tokenBalance.toInt()} QUIZ',
+                        '${appProvider.tokenBalance.toInt()} GUESS',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -269,183 +268,235 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuizCategoriesSection(
-    BuildContext context,
-    AppProvider appProvider,
-  ) {
+  Widget _buildGameSection(BuildContext context, AppProvider appProvider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Let\'s play',
+          'Number Guessing Game',
           style: Theme.of(
             context,
           ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
 
-          children: [
-            _buildCategoryCard(
-              context,
-              appProvider,
-              'Blockchain',
-              Icons.link,
-              const Color(0xFF6366F1),
+        // Game Info Card
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                const Color(0xFF6366F1),
+                const Color(0xFF6366F1).withValues(alpha: 0.8),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            _buildCategoryCard(
-              context,
-              appProvider,
-              'Science',
-              Icons.science,
-              const Color(0xFF10B981),
-            ),
-            _buildCategoryCard(
-              context,
-              appProvider,
-              'Technology',
-              Icons.computer,
-              const Color(0xFFF59E0B),
-            ),
-            _buildCategoryCard(
-              context,
-              appProvider,
-              'History',
-              Icons.history_edu,
-              const Color(0xFFEF4444),
-            ),
-            _buildCategoryCard(
-              context,
-              appProvider,
-              'Geography',
-              Icons.public,
-              const Color(0xFF8B5CF6),
-            ),
-            _buildCategoryCard(
-              context,
-              appProvider,
-              'Mathematics',
-              Icons.calculate,
-              const Color(0xFF06B6D4),
-            ),
-          ],
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.casino,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Guess & Earn',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        Text(
+                          'Guess numbers between 0-100 and earn GUESS tokens!',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Colors.white.withValues(alpha: 0.9),
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Reward Info
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.emoji_events,
+                          color: Colors.amber,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Perfect Guess: 50 GUESS tokens',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.star, color: Colors.green, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Close Guess (≤5): 17.5 GUESS tokens',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Play Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: appProvider.isWalletConnected
+                      ? () {
+                          appProvider.startGame();
+                          Navigator.of(context).pushNamed('/game');
+                        }
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const WalletConnectScreen(),
+                            ),
+                          );
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF6366F1),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    appProvider.isWalletConnected
+                        ? 'Start Playing'
+                        : 'Connect Wallet to Play',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
+
+        const SizedBox(height: 24),
+
+        // Stats Section
+        if (appProvider.isWalletConnected) ...[
+          Text(
+            'Your Stats',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  context,
+                  'Games Played',
+                  '${appProvider.userStats['totalGames'] ?? 0}',
+                  Icons.sports_esports,
+                  const Color(0xFF10B981),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatCard(
+                  context,
+                  'Total Rewards',
+                  '${(appProvider.userStats['totalRewards'] ?? 0.0).toStringAsFixed(1)}',
+                  Icons.monetization_on,
+                  const Color(0xFFF59E0B),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildCategoryCard(
+  Widget _buildStatCard(
     BuildContext context,
-    AppProvider appProvider,
-    String category,
+    String title,
+    String value,
     IconData icon,
     Color color,
   ) {
-    final status = appProvider.getCategoryStatus(category);
-    final isCompleted = status == 'Completed';
-    final canAttempt = appProvider.canAttemptCategory(category);
-
-    return GestureDetector(
-      onTap: () {
-        if (appProvider.isWalletConnected && canAttempt) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const QuizCategoryScreen()),
-          );
-        } else if (!appProvider.isWalletConnected) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const WalletConnectScreen(),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 32),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
-          );
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 28),
+          ),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(height: 12),
-            Text(
-              category,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '5 questions',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 8),
-            if (isCompleted)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      size: 12,
-                      color: const Color(0xFF10B981),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Completed',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: const Color(0xFF10B981),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  status,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-          ],
-        ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

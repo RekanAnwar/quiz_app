@@ -110,7 +110,7 @@ class _WalletConnectScreenState extends State<WalletConnectScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Enter your MetaMask wallet address to start earning tokens by taking quizzes.',
+                            'Enter your MetaMask wallet address to start earning GUESS tokens by playing the number guessing game.',
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: Theme.of(

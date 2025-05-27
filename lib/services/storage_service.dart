@@ -4,7 +4,7 @@ import 'dart:developer' as developer;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/app_constants.dart';
-import '../models/quiz_question.dart';
+import '../models/models.dart';
 
 class StorageService {
   static final StorageService _instance = StorageService._internal();
@@ -38,141 +38,6 @@ class StorageService {
     return await _prefs.remove(AppConstants.walletAddressKey);
   }
 
-  // API key management
-  Future<String?> getApiKey() async {
-    await initialize();
-    return _prefs.getString(AppConstants.apiKeyKey);
-  }
-
-  Future<bool> setApiKey(String apiKey) async {
-    await initialize();
-    return await _prefs.setString(AppConstants.apiKeyKey, apiKey);
-  }
-
-  Future<bool> removeApiKey() async {
-    await initialize();
-    return await _prefs.remove(AppConstants.apiKeyKey);
-  }
-
-  // Quiz results management
-  Future<List<QuizResult>> getCompletedQuizzes() async {
-    await initialize();
-    final jsonString = _prefs.getString(AppConstants.completedQuizzesKey);
-    if (jsonString == null) return [];
-
-    try {
-      final List<dynamic> jsonList = json.decode(jsonString);
-      return jsonList.map((json) => QuizResult.fromJson(json)).toList();
-    } catch (e) {
-      developer.log('Error parsing completed quizzes: $e');
-      return [];
-    }
-  }
-
-  Future<bool> saveQuizResult(QuizResult result) async {
-    await initialize();
-    final currentResults = await getCompletedQuizzes();
-    currentResults.add(result);
-
-    try {
-      final jsonString = json.encode(
-        currentResults.map((r) => r.toJson()).toList(),
-      );
-      return await _prefs.setString(
-        AppConstants.completedQuizzesKey,
-        jsonString,
-      );
-    } catch (e) {
-      developer.log('Error saving quiz result: $e');
-      return false;
-    }
-  }
-
-  Future<bool> hasCompletedQuizCategory(
-    String category,
-    String walletAddress,
-  ) async {
-    final completedQuizzes = await getCompletedQuizzes();
-    return completedQuizzes.any(
-      (quiz) =>
-          quiz.category.toLowerCase() == category.toLowerCase() &&
-          quiz.walletAddress.toLowerCase() == walletAddress.toLowerCase(),
-    );
-  }
-
-  Future<QuizResult?> getQuizResultForCategory(
-    String category,
-    String walletAddress,
-  ) async {
-    final completedQuizzes = await getCompletedQuizzes();
-    try {
-      return completedQuizzes.firstWhere(
-        (quiz) =>
-            quiz.category.toLowerCase() == category.toLowerCase() &&
-            quiz.walletAddress.toLowerCase() == walletAddress.toLowerCase(),
-      );
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Future<List<QuizResult>> getQuizResultsForWallet(String walletAddress) async {
-    final completedQuizzes = await getCompletedQuizzes();
-    return completedQuizzes
-        .where(
-          (quiz) =>
-              quiz.walletAddress.toLowerCase() == walletAddress.toLowerCase(),
-        )
-        .toList();
-  }
-
-  // Statistics and analytics
-  Future<Map<String, dynamic>> getQuizStatistics(String walletAddress) async {
-    final results = await getQuizResultsForWallet(walletAddress);
-
-    if (results.isEmpty) {
-      return {
-        'totalQuizzes': 0,
-        'totalCorrectAnswers': 0,
-        'averageScore': 0.0,
-        'passedQuizzes': 0,
-        'rewardsClaimed': 0,
-        'categoriesCompleted': <String>[],
-      };
-    }
-
-    final totalQuizzes = results.length;
-    final totalCorrectAnswers = results.fold<int>(
-      0,
-      (sum, result) => sum + result.correctAnswers,
-    );
-    final totalQuestions = results.fold<int>(
-      0,
-      (sum, result) => sum + result.totalQuestions,
-    );
-    final averageScore = totalQuestions > 0
-        ? (totalCorrectAnswers / totalQuestions * 100)
-        : 0.0;
-    final passedQuizzes = results.where((result) => result.passed).length;
-    final rewardsClaimed = results
-        .where((result) => result.rewardClaimed)
-        .length;
-    final categoriesCompleted = results
-        .map((result) => result.category)
-        .toSet()
-        .toList();
-
-    return {
-      'totalQuizzes': totalQuizzes,
-      'totalCorrectAnswers': totalCorrectAnswers,
-      'totalQuestions': totalQuestions,
-      'averageScore': averageScore,
-      'passedQuizzes': passedQuizzes,
-      'rewardsClaimed': rewardsClaimed,
-      'categoriesCompleted': categoriesCompleted,
-    };
-  }
-
   // Settings management
   Future<bool> setFirstTimeUser(bool isFirstTime) async {
     await initialize();
@@ -204,55 +69,121 @@ class StorageService {
     return _prefs.getBool('notifications_enabled') ?? true;
   }
 
-  // Temporary quiz state management (for in-progress quizzes)
-  Future<bool> saveTemporaryQuizState({
-    required String category,
-    required List<QuizQuestion> questions,
-    required int currentQuestionIndex,
-    required List<int?> userAnswers,
-    required int correctAnswers,
-  }) async {
+  // Game history management
+  Future<bool> saveGameHistory(
+    String walletAddress,
+    List<GameResult> gameHistory,
+  ) async {
     await initialize();
 
-    final quizState = {
-      'category': category,
-      'questions': questions.map((q) => q.toJson()).toList(),
-      'currentQuestionIndex': currentQuestionIndex,
-      'userAnswers': userAnswers,
-      'correctAnswers': correctAnswers,
-      'timestamp': DateTime.now().millisecondsSinceEpoch,
-    };
-
     try {
-      final jsonString = json.encode(quizState);
-      return await _prefs.setString('temp_quiz_state', jsonString);
+      final gameHistoryData = gameHistory.map((game) => game.toMap()).toList();
+      final jsonString = json.encode(gameHistoryData);
+      return await _prefs.setString('game_history_$walletAddress', jsonString);
     } catch (e) {
-      developer.log('Error saving temporary quiz state: $e');
+      developer.log('Error saving game history: $e');
       return false;
     }
   }
 
-  Future<Map<String, dynamic>?> getTemporaryQuizState() async {
+  Future<List<GameResult>> getGameHistory(String walletAddress) async {
     await initialize();
-    final jsonString = _prefs.getString('temp_quiz_state');
+    final jsonString = _prefs.getString('game_history_$walletAddress');
+    if (jsonString == null) return [];
+
+    try {
+      final List<dynamic> gameHistoryData = json.decode(jsonString);
+      return gameHistoryData.map((data) => GameResult.fromMap(data)).toList();
+    } catch (e) {
+      developer.log('Error parsing game history: $e');
+      return [];
+    }
+  }
+
+  // Game statistics management
+  Future<Map<String, dynamic>> getGameStatistics(String walletAddress) async {
+    await initialize();
+    final gameHistory = await getGameHistory(walletAddress);
+
+    if (gameHistory.isEmpty) {
+      return {
+        'totalGames': 0,
+        'totalRewards': 0.0,
+        'averageAccuracy': 0.0,
+        'bestGuess': 0,
+        'perfectGuesses': 0,
+      };
+    }
+
+    final totalGames = gameHistory.length;
+    final totalRewards = gameHistory.fold<double>(
+      0.0,
+      (sum, game) => sum + game.rewardAmount,
+    );
+    final totalDifference = gameHistory.fold<int>(
+      0,
+      (sum, game) => sum + game.difference,
+    );
+    final averageAccuracy = totalDifference / totalGames;
+    final bestGuess = gameHistory
+        .map((game) => game.difference)
+        .reduce((a, b) => a < b ? a : b);
+    final perfectGuesses =
+        gameHistory.where((game) => game.difference == 0).length;
+
+    return {
+      'totalGames': totalGames,
+      'totalRewards': totalRewards,
+      'averageAccuracy': averageAccuracy,
+      'bestGuess': bestGuess,
+      'perfectGuesses': perfectGuesses,
+    };
+  }
+
+  // Temporary game state management (for in-progress games)
+  Future<bool> saveTemporaryGameState({
+    required String walletAddress,
+    required bool isInProgress,
+    required DateTime timestamp,
+  }) async {
+    await initialize();
+
+    final gameState = {
+      'walletAddress': walletAddress,
+      'isInProgress': isInProgress,
+      'timestamp': timestamp.millisecondsSinceEpoch,
+    };
+
+    try {
+      final jsonString = json.encode(gameState);
+      return await _prefs.setString('temp_game_state', jsonString);
+    } catch (e) {
+      developer.log('Error saving temporary game state: $e');
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getTemporaryGameState() async {
+    await initialize();
+    final jsonString = _prefs.getString('temp_game_state');
     if (jsonString == null) return null;
 
     try {
       return json.decode(jsonString);
     } catch (e) {
-      developer.log('Error parsing temporary quiz state: $e');
+      developer.log('Error parsing temporary game state: $e');
       return null;
     }
   }
 
-  Future<bool> clearTemporaryQuizState() async {
+  Future<bool> clearTemporaryGameState() async {
     await initialize();
-    return await _prefs.remove('temp_quiz_state');
+    return await _prefs.remove('temp_game_state');
   }
 
-  // Check if temporary quiz state is recent (within last hour)
-  Future<bool> hasRecentTemporaryQuizState() async {
-    final state = await getTemporaryQuizState();
+  // Check if temporary game state is recent (within last hour)
+  Future<bool> hasRecentTemporaryGameState() async {
+    final state = await getTemporaryGameState();
     if (state == null) return false;
 
     final timestamp = state['timestamp'] as int?;
@@ -282,8 +213,14 @@ class StorageService {
     await initialize();
     try {
       await removeWalletAddress();
-      await _prefs.remove(AppConstants.completedQuizzesKey);
-      await clearTemporaryQuizState();
+      // Clear all game history keys
+      final keys = _prefs.getKeys();
+      for (String key in keys) {
+        if (key.startsWith('game_history_')) {
+          await _prefs.remove(key);
+        }
+      }
+      await clearTemporaryGameState();
       return true;
     } catch (e) {
       developer.log('Error clearing user data: $e');

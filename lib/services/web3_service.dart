@@ -1,18 +1,17 @@
 // ignore_for_file: unused_field, depend_on_referenced_packages
 
+import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:math';
 
-import 'dart:convert';
-
-import 'package:web3dart/web3dart.dart';
-import 'package:wallet/wallet.dart';
 import 'package:http/http.dart' as http;
+import 'package:wallet/wallet.dart';
+import 'package:web3dart/web3dart.dart';
 
 import '../constants/app_constants.dart';
+import '../contracts/contract_config.dart';
 import '../contracts/erc20_abi.dart';
 import '../contracts/reward_contract_abi.dart';
-import '../contracts/contract_config.dart';
 
 class Web3Service {
   static final Web3Service _instance = Web3Service._internal();
@@ -172,8 +171,7 @@ class Web3Service {
       // Here we show the contract call structure, but the actual signing would need
       // to be done server-side with the reward distributor's private key
 
-      if (ContractConfig.rewardDistributorPrivateKey ==
-          'YOUR_PRIVATE_KEY_HERE') {
+      if (ContractConfig.gameManagerPrivateKey == 'YOUR_PRIVATE_KEY_HERE') {
         throw Exception(
           'Reward distribution requires backend service. '
           'Please configure a secure backend for reward distribution.',
@@ -182,7 +180,7 @@ class Web3Service {
 
       // Get credentials for the reward distributor
       final credentials = EthPrivateKey.fromHex(
-        ContractConfig.rewardDistributorPrivateKey,
+        ContractConfig.gameManagerPrivateKey,
       );
       final distributorAddress = credentials.address;
       developer.log('Distributor address: $distributorAddress');
@@ -435,23 +433,24 @@ class Web3Service {
     }
   }
 
-  // Get user's reward claim status for all categories
-  Future<Map<String, bool>> getAllRewardClaimStatus() async {
+  // Get user's game statistics from contract
+  Future<Map<String, dynamic>> getGameStatistics() async {
     if (_userAddress == null) return {};
 
     try {
       _ensureInitialized();
-      final claimStatus = <String, bool>{};
+      // TODO: Implement actual contract calls to NumberGuessingGame
+      // For now, return empty statistics
+      final stats = <String, dynamic>{
+        'totalGames': 0,
+        'totalRewards': 0.0,
+        'averageAccuracy': 0.0,
+      };
 
-      for (final category in AppConstants.quizCategories) {
-        final hasClaimed = await hasClaimedReward(category);
-        claimStatus[category] = hasClaimed;
-      }
-
-      developer.log('Reward claim status: $claimStatus');
-      return claimStatus;
+      developer.log('Game statistics: $stats');
+      return stats;
     } catch (e) {
-      developer.log('Error getting claim status: $e');
+      developer.log('Error getting game statistics: $e');
       return {};
     }
   }
@@ -461,14 +460,9 @@ class Web3Service {
     if (_userAddress == null) return 0.0;
 
     try {
-      // Count claimed rewards
-      final claimStatus = await getAllRewardClaimStatus();
-      final claimedCount = claimStatus.values
-          .where((claimed) => claimed)
-          .length;
-
-      // Each category gives 10 QUIZ tokens
-      final totalRewards = claimedCount * AppConstants.tokenRewardAmount;
+      // TODO: Implement actual contract call to get user's total rewards
+      // For now, return 0 as placeholder until game contract integration
+      final totalRewards = 0.0;
 
       developer.log('Total rewards earned: $totalRewards QUIZ');
       return totalRewards;
@@ -565,7 +559,7 @@ class Web3Service {
 
       final response = await http.post(
         Uri.parse(
-          '${ContractConfig.backendApiUrl}${ContractConfig.rewardDistributionEndpoint}',
+          '${ContractConfig.backendApiUrl}${ContractConfig.gamePlayEndpoint}',
         ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -633,15 +627,15 @@ class Web3Service {
     try {
       developer.log('Initializing smart contracts...');
       developer.log(
-        'Token contract address: ${ContractConfig.tokenContractAddress}',
+        'Token contract address: ${ContractConfig.guessTokenContractAddress}',
       );
       developer.log(
-        'Reward contract address: ${ContractConfig.rewardContractAddress}',
+        'Game contract address: ${ContractConfig.gameContractAddress}',
       );
 
       // Check if contracts are configured
-      if (ContractConfig.tokenContractAddress == '0x...' ||
-          ContractConfig.rewardContractAddress == '0x...') {
+      if (ContractConfig.guessTokenContractAddress == '0x...' ||
+          ContractConfig.gameContractAddress == '0x...') {
         throw Exception(
           'Contract addresses not configured. Please update ContractConfig.',
         );
@@ -652,7 +646,7 @@ class Web3Service {
         final tokenAbi = ContractAbi.fromJson(erc20Abi, 'ERC20Token');
         _tokenContract = DeployedContract(
           tokenAbi,
-          EthereumAddress.fromHex(ContractConfig.tokenContractAddress),
+          EthereumAddress.fromHex(ContractConfig.guessTokenContractAddress),
         );
         _balanceOfFunction = _tokenContract!.function('balanceOf');
         developer.log('Token contract initialized successfully');
@@ -669,7 +663,7 @@ class Web3Service {
         );
         _rewardContract = DeployedContract(
           rewardAbi,
-          EthereumAddress.fromHex(ContractConfig.rewardContractAddress),
+          EthereumAddress.fromHex(ContractConfig.gameContractAddress),
         );
         _hasClaimedRewardFunction = _rewardContract!.function(
           'hasClaimedReward',

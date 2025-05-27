@@ -6,10 +6,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
 /**
- * @title QuizToken
- * @dev ERC20 Token for Quiz App rewards
+ * @title GuessToken
+ * @dev ERC20 Token for Number Guessing Game rewards
  */
-contract QuizToken is ERC20, Ownable, Pausable {
+contract GuessToken is ERC20, Ownable, Pausable {
     uint256 public constant MAX_SUPPLY = 1000000 * 10**18; // 1 million tokens
     
     mapping(address => bool) public minters;
@@ -18,11 +18,11 @@ contract QuizToken is ERC20, Ownable, Pausable {
     event MinterRemoved(address indexed minter);
     
     modifier onlyMinter() {
-        require(minters[msg.sender], "QuizToken: caller is not a minter");
+        require(minters[msg.sender], "GuessToken: caller is not a minter");
         _;
     }
     
-    constructor() ERC20("Quiz Token", "QUIZ") {
+    constructor() ERC20("Guess Token", "GUESS") {
         // Mint initial supply to owner
         _mint(msg.sender, 100000 * 10**18); // 100k tokens to owner initially
         
@@ -36,8 +36,8 @@ contract QuizToken is ERC20, Ownable, Pausable {
      * @param minter Address to add as minter
      */
     function addMinter(address minter) external onlyOwner {
-        require(minter != address(0), "QuizToken: minter cannot be zero address");
-        require(!minters[minter], "QuizToken: address is already a minter");
+        require(minter != address(0), "GuessToken: minter cannot be zero address");
+        require(!minters[minter], "GuessToken: address is already a minter");
         
         minters[minter] = true;
         emit MinterAdded(minter);
@@ -48,7 +48,7 @@ contract QuizToken is ERC20, Ownable, Pausable {
      * @param minter Address to remove from minters
      */
     function removeMinter(address minter) external onlyOwner {
-        require(minters[minter], "QuizToken: address is not a minter");
+        require(minters[minter], "GuessToken: address is not a minter");
         
         minters[minter] = false;
         emit MinterRemoved(minter);
@@ -60,8 +60,8 @@ contract QuizToken is ERC20, Ownable, Pausable {
      * @param amount Amount of tokens to mint
      */
     function mint(address to, uint256 amount) external onlyMinter whenNotPaused {
-        require(to != address(0), "QuizToken: cannot mint to zero address");
-        require(totalSupply() + amount <= MAX_SUPPLY, "QuizToken: amount exceeds max supply");
+        require(to != address(0), "GuessToken: cannot mint to zero address");
+        require(totalSupply() + amount <= MAX_SUPPLY, "GuessToken: amount exceeds max supply");
         
         _mint(to, amount);
     }

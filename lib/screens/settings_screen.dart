@@ -12,41 +12,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final TextEditingController _apiKeyController = TextEditingController();
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  bool _isApiKeyVisible = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Don't pre-fill API key for security reasons
-  }
-
-  @override
-  void dispose() {
-    _apiKeyController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _saveApiKey() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final apiKey = _apiKeyController.text.trim();
-    final appProvider = context.read<AppProvider>();
-
-    await appProvider.setApiKey(apiKey);
-
-    if (appProvider.error == null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('API key saved successfully!'),
-          backgroundColor: Color(AppConstants.accentColorValue),
-        ),
-      );
-      _apiKeyController.clear();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -58,187 +23,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // API Key Section
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.key,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'OpenAI API Key',
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            const Spacer(),
-                            if (appProvider.hasApiKey)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(
-                                    AppConstants.accentColorValue,
-                                  ).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.check_circle,
-                                      size: 16,
-                                      color: const Color(
-                                        AppConstants.accentColorValue,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Active',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                            color: const Color(
-                                              AppConstants.accentColorValue,
-                                            ),
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          appProvider.hasApiKey
-                              ? 'Your API key is configured. You can update it below or use mock questions.'
-                              : 'Add your OpenAI API key to get AI-generated quiz questions. Without it, you\'ll use pre-made mock questions.',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                        ),
-                        const SizedBox(height: 16),
-                        Form(
-                          key: _formKey,
-                          child: Column(
-                            children: [
-                              TextFormField(
-                                controller: _apiKeyController,
-                                decoration: InputDecoration(
-                                  labelText: 'API Key',
-                                  hintText: 'sk-...',
-                                  prefixIcon: const Icon(Icons.vpn_key),
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      _isApiKeyVisible
-                                          ? Icons.visibility_off
-                                          : Icons.visibility,
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
-                                        _isApiKeyVisible = !_isApiKeyVisible;
-                                      });
-                                    },
-                                  ),
-                                ),
-                                obscureText: !_isApiKeyVisible,
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Please enter your API key';
-                                  }
-                                  if (!value.trim().startsWith('sk-')) {
-                                    return 'API key should start with "sk-"';
-                                  }
-                                  return null;
-                                },
-                                keyboardType: TextInputType.text,
-                                textInputAction: TextInputAction.done,
-                                onFieldSubmitted: (_) => _saveApiKey(),
-                              ),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: _saveApiKey,
-                                  child: const Text('Save API Key'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(
-                              AppConstants.defaultRadius,
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.info_outline,
-                                    size: 16,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'How to get an API key:',
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.onSurfaceVariant,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '1. Visit platform.openai.com\n'
-                                '2. Sign up or log in to your account\n'
-                                '3. Go to API Keys section\n'
-                                '4. Create a new secret key\n'
-                                '5. Copy and paste it here',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
                 // Theme Settings
                 Card(
                   child: Padding(
@@ -317,7 +101,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         SwitchListTile(
                           title: const Text('Enable Notifications'),
                           subtitle: const Text(
-                            'Get notified about new quizzes and rewards',
+                            'Get notified about game updates and rewards',
                           ),
                           value: appProvider.notificationsEnabled,
                           onChanged: (value) {
@@ -371,8 +155,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           _buildInfoRow(
                             context,
-                            'Token Balance',
-                            '${appProvider.tokenBalance.toStringAsFixed(2)} Tokens',
+                            'GUESS Token Balance',
+                            '${appProvider.tokenBalance.toStringAsFixed(2)} GUESS',
                             Icons.monetization_on,
                           ),
                           const SizedBox(height: 16),
@@ -391,9 +175,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 }
                               },
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.error,
+                                foregroundColor:
+                                    Theme.of(context).colorScheme.error,
                                 side: BorderSide(
                                   color: Theme.of(context).colorScheme.error,
                                 ),
@@ -473,18 +256,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           Icon(
                             Icons.error_outline,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onErrorContainer,
+                            color:
+                                Theme.of(context).colorScheme.onErrorContainer,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               appProvider.error!,
                               style: TextStyle(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onErrorContainer,
+                                color:
+                                    Theme.of(
+                                      context,
+                                    ).colorScheme.onErrorContainer,
                               ),
                             ),
                           ),
@@ -518,29 +301,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Web3 Quiz App',
+                          'Web3 Number Guessing Game',
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Earn tokens by taking quizzes on various topics. Connect your wallet and start learning!',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
+                          'Earn GUESS tokens by guessing numbers accurately. Connect your wallet and start playing!',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         Text(
                           'Version 1.0.0',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     ),
@@ -572,25 +355,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: isSelected
-                ? Theme.of(context).colorScheme.primaryContainer
-                : Colors.transparent,
+            color:
+                isSelected
+                    ? Theme.of(context).colorScheme.primaryContainer
+                    : Colors.transparent,
             borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
             border: Border.all(
-              color: isSelected
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(
-                      context,
-                    ).colorScheme.outline.withValues(alpha: 0.3),
+              color:
+                  isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(
+                        context,
+                      ).colorScheme.outline.withValues(alpha: 0.3),
             ),
           ),
           child: Row(
             children: [
               Icon(
                 icon,
-                color: isSelected
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                color:
+                    isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -601,17 +387,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       title,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w500,
-                        color: isSelected
-                            ? Theme.of(context).colorScheme.onPrimaryContainer
-                            : null,
+                        color:
+                            isSelected
+                                ? Theme.of(
+                                  context,
+                                ).colorScheme.onPrimaryContainer
+                                : null,
                       ),
                     ),
                     Text(
                       subtitle,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: isSelected
-                            ? Theme.of(context).colorScheme.onPrimaryContainer
-                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                        color:
+                            isSelected
+                                ? Theme.of(
+                                  context,
+                                ).colorScheme.onPrimaryContainer
+                                : Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],

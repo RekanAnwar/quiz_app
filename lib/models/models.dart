@@ -1,1 +1,1 @@
-export 'quiz_question.dart';
+export 'game_result.dart';

@@ -3,19 +3,18 @@ import 'package:provider/provider.dart';
 
 import 'constants/app_constants.dart';
 import 'providers/app_provider.dart';
+import 'screens/game_result_screen.dart';
+import 'screens/game_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/quiz_category_screen.dart';
-import 'screens/quiz_result_screen.dart';
-import 'screens/quiz_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/wallet_connect_screen.dart';
 
 void main() {
-  runApp(const QuizApp());
+  runApp(const NumberGuessingApp());
 }
 
-class QuizApp extends StatelessWidget {
-  const QuizApp({super.key});
+class NumberGuessingApp extends StatelessWidget {
+  const NumberGuessingApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +23,7 @@ class QuizApp extends StatelessWidget {
       child: Consumer<AppProvider>(
         builder: (context, appProvider, child) {
           return MaterialApp(
-            title: 'Web3 Quiz App',
+            title: 'Web3 Number Guessing Game',
             debugShowCheckedModeBanner: false,
             theme: _buildLightTheme(),
             darkTheme: _buildDarkTheme(),
@@ -33,9 +32,8 @@ class QuizApp extends StatelessWidget {
             routes: {
               '/home': (context) => const HomeScreen(),
               '/wallet-connect': (context) => const WalletConnectScreen(),
-              '/quiz-categories': (context) => const QuizCategoryScreen(),
-              '/quiz': (context) => const QuizScreen(),
-              '/quiz-result': (context) => const QuizResultScreen(),
+              '/game': (context) => const GameScreen(),
+              '/game-result': (context) => const GameResultScreen(),
               '/settings': (context) => const SettingsScreen(),
             },
           );
@@ -192,7 +190,7 @@ class _AppWrapperState extends State<AppWrapper> {
                   CircularProgressIndicator(),
                   SizedBox(height: 16),
                   Text(
-                    'Initializing Web3 Quiz App...',
+                    'Initializing Web3 Number Guessing Game...',
                     style: TextStyle(fontSize: 16),
                   ),
                 ],
@@ -236,10 +234,10 @@ class _AppWrapperState extends State<AppWrapper> {
         }
 
         // Navigate based on app state
-        if (appProvider.isQuizInProgress) {
-          return const QuizScreen();
-        } else if (appProvider.lastQuizResult != null) {
-          return const QuizResultScreen();
+        if (appProvider.isGameInProgress) {
+          return const GameScreen();
+        } else if (appProvider.lastGameResult != null) {
+          return const GameResultScreen();
         } else {
           return const HomeScreen();
         }
