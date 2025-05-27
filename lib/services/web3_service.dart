@@ -7,7 +7,6 @@ import 'package:http/http.dart' as http;
 import 'package:wallet/wallet.dart';
 import 'package:web3dart/web3dart.dart';
 
-import '../constants/app_constants.dart';
 import '../contracts/contract_config.dart';
 import '../contracts/erc20_abi.dart';
 import '../contracts/game_contract_abi.dart';
@@ -26,13 +25,9 @@ class Web3Service {
 
   // Token contract functions
   ContractFunction? _balanceOfFunction;
-  ContractFunction? _transferFunction;
 
   // Game contract functions
   ContractFunction? _playGameFunction;
-  ContractFunction? _getUserTotalRewardsFunction;
-  ContractFunction? _getUserTotalGamesFunction;
-  ContractFunction? _getUserGameHistoryFunction;
   ContractFunction? _getLatestGameResultFunction;
   ContractFunction? _pausedFunction;
 
@@ -187,56 +182,6 @@ class Web3Service {
     }
   }
 
-  // Get user's total rewards
-  Future<double> getUserTotalRewards() async {
-    if (_userAddress == null) return 0.0;
-
-    try {
-      _ensureInitialized();
-
-      final address = EthereumAddress.fromHex(_userAddress!);
-      final result = await _web3Client!.call(
-        contract: _gameContract!,
-        function: _getUserTotalRewardsFunction!,
-        params: [address],
-      );
-
-      final BigInt rewards = result.first as BigInt;
-      final double totalRewards = rewards.toDouble() / pow(10, 18);
-
-      developer.log('User Total Rewards: $totalRewards');
-      return totalRewards;
-    } catch (e) {
-      developer.log('Error getting user total rewards: $e');
-      return 0.0;
-    }
-  }
-
-  // Get user's total games played
-  Future<int> getUserTotalGames() async {
-    if (_userAddress == null) return 0;
-
-    try {
-      _ensureInitialized();
-
-      final address = EthereumAddress.fromHex(_userAddress!);
-      final result = await _web3Client!.call(
-        contract: _gameContract!,
-        function: _getUserTotalGamesFunction!,
-        params: [address],
-      );
-
-      final BigInt games = result.first as BigInt;
-      final int totalGames = games.toInt();
-
-      developer.log('User Total Games: $totalGames');
-      return totalGames;
-    } catch (e) {
-      developer.log('Error getting user total games: $e');
-      return 0;
-    }
-  }
-
   // Get user's latest game result
   Future<Map<String, dynamic>?> getLatestGameResult() async {
     if (_userAddress == null) return null;
@@ -300,83 +245,15 @@ class Web3Service {
     }
   }
 
-  // Get network information
-  Map<String, dynamic> getNetworkInfo() {
-    return {
-      'name': 'Ethereum Sepolia Testnet',
-      'chainId': AppConstants.sepoliaChainId,
-      'rpcUrl': AppConstants.sepoliaRpcUrl,
-      'explorer': AppConstants.sepoliaExplorer,
-      'currency': 'ETH',
-    };
-  }
-
   // Format address for display (show first 6 and last 4 characters)
   String formatAddress(String address) {
     if (address.length < 10) return address;
     return '${address.substring(0, 6)}...${address.substring(address.length - 4)}';
   }
 
-  // Get formatted user address
-  String? get formattedUserAddress {
-    if (_userAddress == null) return null;
-    return formatAddress(_userAddress!);
-  }
-
   // Disconnect wallet
   void disconnect() {
     _userAddress = null;
-  }
-
-  // Check if the current network is Ethereum Sepolia
-  Future<bool> isOnEthereumSepolia() async {
-    if (_web3Client == null) return false;
-
-    try {
-      // Get the current chain ID from the network
-      final chainId = await _web3Client!.getChainId();
-
-      // Ethereum Sepolia chain ID is 11155111
-      final isCorrectNetwork =
-          chainId == BigInt.from(AppConstants.sepoliaChainId);
-
-      developer.log(
-        'Current chain ID: $chainId, Expected: ${AppConstants.sepoliaChainId}',
-      );
-      return isCorrectNetwork;
-    } catch (e) {
-      developer.log('Error checking network: $e');
-      return false;
-    }
-  }
-
-  // Estimate gas fee for a game transaction
-  Future<double> estimateGasFee() async {
-    if (_web3Client == null ||
-        _gameContract == null ||
-        _playGameFunction == null) {
-      return 0.0;
-    }
-
-    try {
-      // Get current gas price
-      final gasPrice = await _web3Client!.getGasPrice();
-
-      // Estimate gas for a typical game transaction
-      final estimatedGasLimit = 300000; // Typical gas limit for playGame
-
-      // Calculate total gas fee in Wei
-      final gasFeeWei = gasPrice.getInWei * BigInt.from(estimatedGasLimit);
-
-      // Convert to ETH
-      final gasFeeEth = gasFeeWei.toDouble() / pow(10, 18);
-
-      developer.log('Estimated gas fee: ${gasFeeEth.toStringAsFixed(6)} ETH');
-      return gasFeeEth;
-    } catch (e) {
-      developer.log('Error estimating gas fee: $e');
-      return 0.0;
-    }
   }
 
   // Initialize the service
@@ -438,7 +315,6 @@ class Web3Service {
           EthereumAddress.fromHex(ContractConfig.guessTokenContractAddress),
         );
         _balanceOfFunction = _tokenContract!.function('balanceOf');
-        _transferFunction = _tokenContract!.function('transfer');
         developer.log('Token contract initialized successfully');
       } catch (e) {
         developer.log('Error initializing token contract: $e');
@@ -456,15 +332,6 @@ class Web3Service {
           EthereumAddress.fromHex(ContractConfig.gameContractAddress),
         );
         _playGameFunction = _gameContract!.function('playGame');
-        _getUserTotalRewardsFunction = _gameContract!.function(
-          'getUserTotalRewards',
-        );
-        _getUserTotalGamesFunction = _gameContract!.function(
-          'getUserTotalGames',
-        );
-        _getUserGameHistoryFunction = _gameContract!.function(
-          'getUserGameHistory',
-        );
         _getLatestGameResultFunction = _gameContract!.function(
           'getLatestGameResult',
         );
@@ -480,20 +347,6 @@ class Web3Service {
       developer.log('Error initializing contracts: $e');
       rethrow; // Rethrow to let the caller handle this error
     }
-  }
-
-  // Get detailed initialization status
-  Map<String, dynamic> getInitializationStatus() {
-    return {
-      'web3ClientInitialized': _web3Client != null,
-      'tokenContractInitialized': _tokenContract != null,
-      'gameContractInitialized': _gameContract != null,
-      'balanceOfFunctionReady': _balanceOfFunction != null,
-      'playGameFunctionReady': _playGameFunction != null,
-      'getUserTotalRewardsFunctionReady': _getUserTotalRewardsFunction != null,
-      'getUserTotalGamesFunctionReady': _getUserTotalGamesFunction != null,
-      'isFullyInitialized': isInitialized,
-    };
   }
 
   // Dispose resources

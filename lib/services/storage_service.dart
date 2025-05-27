@@ -37,37 +37,6 @@ class StorageService {
     return await _prefs.remove(AppConstants.walletAddressKey);
   }
 
-  // Settings management
-  Future<bool> setFirstTimeUser(bool isFirstTime) async {
-    await initialize();
-    return await _prefs.setBool('first_time_user', isFirstTime);
-  }
-
-  Future<bool> isFirstTimeUser() async {
-    await initialize();
-    return _prefs.getBool('first_time_user') ?? true;
-  }
-
-  Future<bool> setThemeMode(String themeMode) async {
-    await initialize();
-    return await _prefs.setString('theme_mode', themeMode);
-  }
-
-  Future<String> getThemeMode() async {
-    await initialize();
-    return _prefs.getString('theme_mode') ?? 'system';
-  }
-
-  Future<bool> setNotificationsEnabled(bool enabled) async {
-    await initialize();
-    return await _prefs.setBool('notifications_enabled', enabled);
-  }
-
-  Future<bool> getNotificationsEnabled() async {
-    await initialize();
-    return _prefs.getBool('notifications_enabled') ?? true;
-  }
-
   // Temporary game state management (for in-progress games)
   Future<bool> saveTemporaryGameState({
     required String walletAddress,
@@ -122,18 +91,6 @@ class StorageService {
     final difference = now.difference(stateTime);
 
     return difference.inHours < 1; // Consider recent if within last hour
-  }
-
-  // Clear all data (useful for logout or reset)
-  Future<bool> clearAllData() async {
-    await initialize();
-    try {
-      await _prefs.clear();
-      return true;
-    } catch (e) {
-      developer.log('Error clearing all data: $e');
-      return false;
-    }
   }
 
   // Clear only user-specific data (keep settings)

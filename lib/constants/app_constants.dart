@@ -3,12 +3,6 @@ class AppConstants {
   static const String sepoliaRpcUrl =
       'https://ethereum-sepolia-rpc.publicnode.com';
   static const int sepoliaChainId = 11155111;
-  static const String sepoliaExplorer = 'https://sepolia.etherscan.io/';
-
-  // Game Configuration
-  static const int minNumber = 0;
-  static const int maxNumber = 100;
-  static const double baseRewardAmount = 10.0;
 
   // UI Constants
   static const double defaultPadding = 16.0;
