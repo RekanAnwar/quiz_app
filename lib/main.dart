@@ -211,7 +211,6 @@ class _AppWrapperState extends State<AppWrapper> {
           );
         }
 
-        // Always show the unified screen once initialized
         return const HomeScreen();
       },
     );
