@@ -3,11 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'constants/app_constants.dart';
 import 'providers/app_provider.dart';
-import 'screens/game_result_screen.dart';
-import 'screens/game_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/settings_screen.dart';
-import 'screens/wallet_connect_screen.dart';
 
 void main() {
   runApp(const NumberGuessingApp());
@@ -29,13 +25,6 @@ class NumberGuessingApp extends StatelessWidget {
             darkTheme: _buildDarkTheme(),
             themeMode: _getThemeMode(appProvider.themeMode),
             home: const AppWrapper(),
-            routes: {
-              '/home': (context) => const HomeScreen(),
-              '/wallet-connect': (context) => const WalletConnectScreen(),
-              '/game': (context) => const GameScreen(),
-              '/game-result': (context) => const GameResultScreen(),
-              '/settings': (context) => const SettingsScreen(),
-            },
           );
         },
       ),
@@ -199,7 +188,7 @@ class _AppWrapperState extends State<AppWrapper> {
           );
         }
 
-        if (appProvider.error != null) {
+        if (appProvider.error != null && !appProvider.isInitialized) {
           return Scaffold(
             body: Center(
               child: Column(
@@ -233,14 +222,8 @@ class _AppWrapperState extends State<AppWrapper> {
           );
         }
 
-        // Navigate based on app state
-        if (appProvider.isGameInProgress) {
-          return const GameScreen();
-        } else if (appProvider.lastGameResult != null) {
-          return const GameResultScreen();
-        } else {
-          return const HomeScreen();
-        }
+        // Always show the unified screen once initialized
+        return const HomeScreen();
       },
     );
   }

@@ -1,93 +1,73 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../constants/app_constants.dart';
+import '../models/models.dart';
 import '../providers/app_provider.dart';
-import 'settings_screen.dart';
-import 'wallet_connect_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController _walletAddressController =
+      TextEditingController();
+  final TextEditingController _guessController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _walletAddressController.dispose();
+    _guessController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: Text(
-          'Number Guessing Game',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        title: const Text('Web3 Guessing Game'),
         actions: [
-          Consumer<AppProvider>(
-            builder: (context, appProvider, child) {
-              return Container(
-                margin: const EdgeInsets.only(right: 16),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.token,
-                      size: 16,
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${appProvider.tokenBalance.toInt()}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
-            },
+            icon: const Icon(Icons.settings),
+            onPressed: () => _showSettingsModal(context),
           ),
         ],
       ),
       body: Consumer<AppProvider>(
-        builder: (context, appProvider, child) {
-          return RefreshIndicator(
-            onRefresh: () async {
-              await appProvider.initialize();
-            },
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildUserSection(context, appProvider),
-                  const SizedBox(height: 24),
-                  if (!appProvider.isWalletConnected) ...[
-                    _buildConnectWalletCard(context, appProvider),
-                    const SizedBox(height: 24),
-                  ],
-                  _buildGameSection(context, appProvider),
-                ],
-              ),
+        builder: (context, appProvider, _) {
+          return Padding(
+            padding: const EdgeInsets.all(AppConstants.defaultPadding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Show error message if any
+                if (appProvider.error != null)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade100,
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.defaultRadius,
+                      ),
+                      border: Border.all(color: Colors.red),
+                    ),
+                    child: Text(
+                      appProvider.error!,
+                      style: TextStyle(color: Colors.red.shade800),
+                    ),
+                  ),
+
+                // Main content based on wallet connection status
+                if (!appProvider.isWalletConnected)
+                  _buildWalletConnectSection(appProvider)
+                else
+                  Expanded(child: _buildConnectedSection(appProvider)),
+              ],
             ),
           );
         },
@@ -95,409 +75,448 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildUserSection(BuildContext context, AppProvider appProvider) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).colorScheme.primary,
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+  Widget _buildWalletConnectSection(AppProvider appProvider) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.defaultPadding),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Connect Your Wallet',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            TextField(
+              controller: _walletAddressController,
+              decoration: const InputDecoration(
+                labelText: 'Wallet Address',
+                hintText: 'Enter your Ethereum wallet address',
+                prefixIcon: Icon(Icons.account_balance_wallet),
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed:
+                  appProvider.isWalletConnecting
+                      ? null
+                      : () async {
+                        if (_walletAddressController.text.isNotEmpty) {
+                          await appProvider.connectWallet(
+                            _walletAddressController.text,
+                          );
+                        }
+                      },
+              icon:
+                  appProvider.isWalletConnecting
+                      ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                      : const Icon(Icons.link),
+              label: Text(
+                appProvider.isWalletConnecting
+                    ? 'Connecting...'
+                    : 'Connect Wallet',
+              ),
+            ),
           ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
       ),
+    );
+  }
+
+  Widget _buildConnectedSection(AppProvider appProvider) {
+    return SingleChildScrollView(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 25,
-                backgroundColor: Colors.white.withValues(alpha: 0.2),
-                child: Icon(Icons.person, color: Colors.white, size: 28),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Hi, Player!',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    Text(
-                      'Ready to test your guessing skills?',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (appProvider.isWalletConnected) ...[
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Wallet info card
+          Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: Padding(
+              padding: const EdgeInsets.all(AppConstants.defaultPadding),
+              child: Column(
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      Text(
-                        'Wallet Balance',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.8),
-                          fontSize: 12,
+                      const Icon(Icons.account_balance_wallet),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          appProvider.formattedWalletAddress ?? '',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${appProvider.tokenBalance.toInt()} GUESS',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      IconButton(
+                        icon: const Icon(Icons.logout),
+                        onPressed: () => appProvider.disconnectWallet(),
+                        tooltip: 'Disconnect wallet',
                       ),
                     ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.account_balance_wallet,
-                      color: Colors.white,
-                      size: 20,
-                    ),
+                  const Divider(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _balanceItem(
+                        'ETH',
+                        appProvider.ethBalance.toStringAsFixed(4),
+                      ),
+                      _balanceItem(
+                        'TOKEN',
+                        appProvider.tokenBalance.toStringAsFixed(2),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ],
-        ],
-      ),
-    );
-  }
+          ),
 
-  Widget _buildConnectWalletCard(
-    BuildContext context,
-    AppProvider appProvider,
-  ) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(
-          context,
-        ).colorScheme.errorContainer.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.account_balance_wallet_outlined,
-            size: 48,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Connect Wallet',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Connect your wallet to start earning tokens',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: appProvider.isWalletConnecting
-                  ? null
-                  : () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const WalletConnectScreen(),
-                        ),
-                      );
-                    },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: appProvider.isWalletConnecting
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Connect Wallet'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+          // Game section
+          if (appProvider.isGameInProgress)
+            _buildGameInputSection(appProvider)
+          else if (appProvider.lastGameResult != null)
+            _buildGameResultSection(appProvider)
+          else
+            _buildStartGameSection(appProvider),
 
-  Widget _buildGameSection(BuildContext context, AppProvider appProvider) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Number Guessing Game',
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-
-        // Game Info Card
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFF6366F1),
-                const Color(0xFF6366F1).withValues(alpha: 0.8),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.casino,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Guess & Earn',
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        Text(
-                          'Guess numbers between 0-100 and earn GUESS tokens!',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: Colors.white.withValues(alpha: 0.9),
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Reward Info
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+          // Game history
+          if (appProvider.gameHistory.isNotEmpty)
+            Card(
+              margin: const EdgeInsets.only(top: 16),
+              child: Padding(
+                padding: const EdgeInsets.all(AppConstants.defaultPadding),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.emoji_events,
-                          color: Colors.amber,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Perfect Guess: 50 GUESS tokens',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
+                    const Text(
+                      'Recent Games',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.green, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Close Guess (≤5): 17.5 GUESS tokens',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            fontWeight: FontWeight.w500,
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: appProvider.gameHistory.length.clamp(0, 5),
+                      itemBuilder: (context, index) {
+                        final game = appProvider.gameHistory[index];
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            'Guess: ${game.userGuess} • Target: ${game.targetNumber}',
                           ),
-                        ),
-                      ],
+                          subtitle: Text(
+                            '${_formatTimestamp(game.timestamp)} • Reward: ${game.rewardAmount} TOKEN',
+                          ),
+                          leading: CircleAvatar(
+                            backgroundColor: _getResultColor(game),
+                            child: Text(
+                              game.difference.toString(),
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
               ),
+            ),
+        ],
+      ),
+    );
+  }
 
-              const SizedBox(height: 20),
+  Widget _balanceItem(String label, String value) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(fontSize: 18)),
+        ],
+      ),
+    );
+  }
 
-              // Play Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: appProvider.isWalletConnected
-                      ? () {
-                          appProvider.startGame();
-                          Navigator.of(context).pushNamed('/game');
-                        }
-                      : () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const WalletConnectScreen(),
-                            ),
-                          );
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF6366F1),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    appProvider.isWalletConnected
-                        ? 'Start Playing'
-                        : 'Connect Wallet to Play',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+  Widget _buildStartGameSection(AppProvider appProvider) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.defaultPadding),
+        child: Column(
+          children: [
+            const Text(
+              'Number Guessing Game',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Guess a number between 0 and 100. The closer your guess is to the target number, the more tokens you win!',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => appProvider.startGame(),
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('Start New Game'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGameInputSection(AppProvider appProvider) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.defaultPadding),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              const Text(
+                'Make Your Guess!',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Enter a number between 0 and 100:',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: _guessController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Your Guess',
+                  hintText: 'Enter a number (0-100)',
                 ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a number';
+                  }
+                  final number = int.tryParse(value);
+                  if (number == null) {
+                    return 'Please enter a valid number';
+                  }
+                  if (number < 0 || number > 100) {
+                    return 'Number must be between 0 and 100';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  TextButton.icon(
+                    onPressed: () => appProvider.endGame(),
+                    icon: const Icon(Icons.cancel),
+                    label: const Text('Cancel'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed:
+                        appProvider.isLoading
+                            ? null
+                            : () {
+                              if (_formKey.currentState!.validate()) {
+                                final guess = int.parse(_guessController.text);
+                                appProvider.playGame(guess);
+                              }
+                            },
+                    icon:
+                        appProvider.isLoading
+                            ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.check_circle),
+                    label: Text(
+                      appProvider.isLoading ? 'Submitting...' : 'Submit Guess',
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-
-        const SizedBox(height: 24),
-
-        // Stats Section
-        if (appProvider.isWalletConnected) ...[
-          Text(
-            'Your Stats',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  context,
-                  'Games Played',
-                  '${appProvider.userStats['totalGames'] ?? 0}',
-                  Icons.sports_esports,
-                  const Color(0xFF10B981),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildStatCard(
-                  context,
-                  'Total Rewards',
-                  '${(appProvider.userStats['totalRewards'] ?? 0.0).toStringAsFixed(1)}',
-                  Icons.monetization_on,
-                  const Color(0xFFF59E0B),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ],
+      ),
     );
   }
 
-  Widget _buildStatCard(
-    BuildContext context,
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
+  Widget _buildGameResultSection(AppProvider appProvider) {
+    final result = appProvider.lastGameResult!;
+    final difference = result.difference;
+
+    String resultMessage;
+    if (difference == 0) {
+      resultMessage = 'Perfect! Exact match!';
+    } else if (difference <= 5) {
+      resultMessage = 'Amazing! Very close!';
+    } else if (difference <= 10) {
+      resultMessage = 'Great! Close guess!';
+    } else if (difference <= 20) {
+      resultMessage = 'Good! Not too far off!';
+    } else if (difference <= 30) {
+      resultMessage = 'Not bad! Keep trying!';
+    } else {
+      resultMessage = 'Try again for a better score!';
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.defaultPadding),
+        child: Column(
+          children: [
+            const Text(
+              'Game Result',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-          ),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            const SizedBox(height: 24),
+            CircleAvatar(
+              radius: 48,
+              backgroundColor: _getResultColor(result),
+              child: Text(
+                difference.toString(),
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+            const SizedBox(height: 24),
+            Text(
+              resultMessage,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Your guess: ${result.userGuess}',
+              style: const TextStyle(fontSize: 18),
+            ),
+            Text(
+              'Target number: ${result.targetNumber}',
+              style: const TextStyle(fontSize: 18),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Reward: ${result.rewardAmount} TOKEN',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () {
+                appProvider.clearLastGameResult();
+              },
+              icon: const Icon(Icons.replay),
+              label: const Text('Play Again'),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  void _showSettingsModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return Consumer<AppProvider>(
+          builder: (context, appProvider, _) {
+            return Padding(
+              padding: const EdgeInsets.all(AppConstants.defaultPadding),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Settings',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    title: const Text('App Theme'),
+                    leading: const Icon(Icons.brightness_6),
+                    trailing: DropdownButton<String>(
+                      value: appProvider.themeMode,
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          appProvider.updateThemeMode(newValue);
+                        }
+                      },
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'system',
+                          child: Text('System'),
+                        ),
+                        DropdownMenuItem(value: 'light', child: Text('Light')),
+                        DropdownMenuItem(value: 'dark', child: Text('Dark')),
+                      ],
+                    ),
+                  ),
+                  SwitchListTile(
+                    title: const Text('Notifications'),
+                    subtitle: const Text('Enable push notifications'),
+                    value: appProvider.notificationsEnabled,
+                    onChanged: (bool value) {
+                      appProvider.updateNotificationsEnabled(value);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Close'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Color _getResultColor(GameResult result) {
+    final difference = result.difference;
+    if (difference == 0) {
+      return Colors.purple;
+    } else if (difference <= 5) {
+      return Colors.blue;
+    } else if (difference <= 10) {
+      return Colors.green;
+    } else if (difference <= 20) {
+      return Colors.amber;
+    } else if (difference <= 30) {
+      return Colors.orange;
+    } else {
+      return Colors.red;
+    }
+  }
+
+  String _formatTimestamp(DateTime timestamp) {
+    return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
   }
 }
