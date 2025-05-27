@@ -1,7 +1,7 @@
 {
-    "name": "quiz-app-contracts",
+    "name": "guess-game-contracts",
     "version": "1.0.0",
-    "description": "Smart contracts for the Quiz App reward system",
+    "description": "Smart contracts for the Guess Game reward system",
     "main": "hardhat.config.js",
     "scripts": {
         "compile": "hardhat compile",
@@ -37,10 +37,10 @@
         "solidity",
         "ethereum",
         "smart-contracts",
-        "quiz-app",
+        "guess-game",
         "rewards",
         "scroll"
     ],
-    "author": "Quiz App Team",
+    "author": "Guess Game Team",
     "license": "MIT"
 }

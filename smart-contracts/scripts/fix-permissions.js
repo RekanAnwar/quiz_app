@@ -11,32 +11,32 @@ async function main() {
     console.log("Using account:", deployer.address);
 
     // Get contract instances
-    const QuizToken = await ethers.getContractFactory("QuizToken");
-    const quizToken = QuizToken.attach(tokenAddress);
+    const GuessToken = await ethers.getContractFactory("GuessToken");
+    const guessToken = GuessToken.attach(tokenAddress);
 
     console.log("📋 Contract Status:");
-    console.log("- QuizToken:", tokenAddress);
+    console.log("- GuessToken:", tokenAddress);
     console.log("- RewardDistributor:", rewardAddress);
 
     try {
         // Check if RewardDistributor has minter permissions
         console.log("\n🔍 Checking minter permissions...");
 
-        const isMinter = await quizToken.minters(rewardAddress);
+        const isMinter = await guessToken.minters(rewardAddress);
         console.log("RewardDistributor is minter:", isMinter);
 
         if (!isMinter) {
             console.log("\n❌ RewardDistributor does NOT have minter permissions!");
             console.log("🔧 Adding minter permissions...");
 
-            const tx = await quizToken.addMinter(rewardAddress);
+            const tx = await guessToken.addMinter(rewardAddress);
             await tx.wait();
 
             console.log("✅ Minter permissions granted!");
             console.log("Transaction hash:", tx.hash);
 
             // Verify again
-            const isMinterNow = await quizToken.minters(rewardAddress);
+            const isMinterNow = await guessToken.minters(rewardAddress);
             console.log("Verification - RewardDistributor is minter:", isMinterNow);
         } else {
             console.log("✅ RewardDistributor already has minter permissions!");
@@ -44,11 +44,11 @@ async function main() {
 
         // Check token supply and balances
         console.log("\n📊 Token Information:");
-        const totalSupply = await quizToken.totalSupply();
-        const deployerBalance = await quizToken.balanceOf(deployer.address);
+        const totalSupply = await guessToken.totalSupply();
+        const deployerBalance = await guessToken.balanceOf(deployer.address);
 
-        console.log("Total Supply:", ethers.formatEther(totalSupply), "QUIZ");
-        console.log("Deployer Balance:", ethers.formatEther(deployerBalance), "QUIZ");
+        console.log("Total Supply:", ethers.formatEther(totalSupply), "GUESS");
+        console.log("Deployer Balance:", ethers.formatEther(deployerBalance), "GUESS");
 
         console.log("\n🎉 Permission check complete!");
 

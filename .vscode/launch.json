@@ -6,18 +6,18 @@
     "configurations": [
     
         {
-            "name": "quiz_app",
+            "name": "guess_game",
             "request": "launch",
             "type": "dart"
         },
         {
-            "name": "quiz_app (profile mode)",
+            "name": "guess_game (profile mode)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile"
         },
         {
-            "name": "quiz_app (release mode)",
+            "name": "guess_game (release mode)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"

@@ -56,7 +56,7 @@ This is a simple yet engaging blockchain game where:
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd quiz_app
+   cd guess_game
    ```
 
 2. **Install Flutter dependencies**
@@ -100,7 +100,7 @@ flutter run
 ## 📁 Project Structure
 
 ```
-quiz_app/
+guess_game/
 ├── lib/
 │   ├── constants/          # App constants and configuration
 │   ├── models/            # Data models (GameResult)

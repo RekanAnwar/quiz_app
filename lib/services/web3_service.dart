@@ -122,8 +122,8 @@ class Web3Service {
     }
   }
 
-  // Check if user has already claimed reward for a specific quiz category
-  Future<bool> hasClaimedReward(String quizCategory) async {
+  // Check if user has already claimed reward for a specific game category
+  Future<bool> hasClaimedReward(String gameCategory) async {
     if (_userAddress == null) return false;
 
     try {
@@ -133,11 +133,11 @@ class Web3Service {
       final result = await _web3Client!.call(
         contract: _rewardContract!,
         function: _hasClaimedRewardFunction!,
-        params: [address, quizCategory],
+        params: [address, gameCategory],
       );
 
       final bool hasClaimed = result.first as bool;
-      developer.log('Has claimed reward for $quizCategory: $hasClaimed');
+      developer.log('Has claimed reward for $gameCategory: $hasClaimed');
 
       return hasClaimed;
     } catch (e) {
@@ -147,7 +147,7 @@ class Web3Service {
   }
 
   // Distribute token reward (real implementation)
-  Future<String?> distributeReward(String quizCategory, double amount) async {
+  Future<String?> distributeReward(String gameCategory, double amount) async {
     if (_userAddress == null) {
       throw Exception('No wallet connected');
     }
@@ -155,16 +155,16 @@ class Web3Service {
     try {
       _ensureInitialized();
       developer.log(
-        'Distributing $amount tokens to $_userAddress for $quizCategory quiz',
+        'Distributing $amount tokens to $_userAddress for $gameCategory game',
       );
 
       // Check if user has already claimed this reward
-      final hasClaimed = await hasClaimedReward(quizCategory);
+      final hasClaimed = await hasClaimedReward(gameCategory);
       if (hasClaimed) {
-        throw Exception('Reward for $quizCategory has already been claimed');
+        throw Exception('Reward for $gameCategory has already been claimed');
       }
 
-      // Check if RewardDistributor has minter role on QuizToken
+      // Check if RewardDistributor has minter role on GuessToken
       await _checkMinterPermissions();
 
       // For production: This should be called from a secure backend service
@@ -198,8 +198,8 @@ class Web3Service {
 
       developer.log('Transaction details:');
       developer.log('- User: $userAddress');
-      developer.log('- Category: $quizCategory');
-      developer.log('- Fixed reward amount: 10 QUIZ tokens (set in contract)');
+      developer.log('- Category: $gameCategory');
+      developer.log('- Fixed reward amount: 10 GUESS tokens (set in contract)');
 
       // Call the distributeReward function (only 2 parameters: user, category)
       final transaction = Transaction.callContract(
@@ -207,7 +207,7 @@ class Web3Service {
         function: _distributeRewardFunction!,
         parameters: [
           userAddress,
-          quizCategory,
+          gameCategory,
         ], // Removed rewardAmount parameter
         maxGas: 500000, // Increased gas limit
         gasPrice: EtherAmount.inWei(BigInt.from(20000000000)), // 20 gwei
@@ -232,7 +232,7 @@ class Web3Service {
       // Check for common revert reasons
       String errorMessage = e.toString();
       if (errorMessage.contains('already claimed')) {
-        throw Exception('Reward already claimed for $quizCategory category');
+        throw Exception('Reward already claimed for $gameCategory category');
       } else if (errorMessage.contains('not minter')) {
         throw Exception('Distributor address is not authorized as minter');
       } else if (errorMessage.contains('paused')) {
@@ -389,7 +389,7 @@ class Web3Service {
 
   // Get wallet connection URL for MetaMask deep linking
   String getMetaMaskConnectionUrl() {
-    return 'https://metamask.app.link/dapp/quiz-app.example.com';
+    return 'https://metamask.app.link/dapp/guess-game.example.com';
   }
 
   // Get current block number
@@ -464,7 +464,7 @@ class Web3Service {
       // For now, return 0 as placeholder until game contract integration
       final totalRewards = 0.0;
 
-      developer.log('Total rewards earned: $totalRewards QUIZ');
+      developer.log('Total rewards earned: $totalRewards GUESS');
       return totalRewards;
     } catch (e) {
       developer.log('Error calculating total rewards: $e');
@@ -523,14 +523,14 @@ class Web3Service {
     };
   }
 
-  // Check if RewardDistributor has minter permissions on QuizToken
+  // Check if RewardDistributor has minter permissions on GuessToken
   Future<void> _checkMinterPermissions() async {
     try {
       // Get the RewardDistributor contract address
       final rewardContractAddress = _rewardContract!.address;
 
       // Create a simple function call to check if the reward contract has minter role
-      // This assumes the QuizToken has a "hasRole" or similar function
+      // This assumes the GuessToken has a "hasRole" or similar function
       developer.log(
         'Checking if RewardDistributor ($rewardContractAddress) has minter permissions...',
       );
@@ -547,7 +547,7 @@ class Web3Service {
 
   // Alternative backend-based reward distribution (recommended for production)
   Future<String?> distributeRewardViaBackend(
-    String quizCategory,
+    String gameCategory,
     double amount,
   ) async {
     if (_userAddress == null) {
@@ -564,7 +564,7 @@ class Web3Service {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'userAddress': _userAddress,
-          'quizCategory': quizCategory,
+          'gameCategory': gameCategory,
           'amount': amount,
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         }),

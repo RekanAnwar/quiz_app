@@ -1,4 +1,4 @@
-// Quiz Reward Contract ABI
+// Game Reward Contract ABI
 const String rewardContractAbi = '''
 [
   {

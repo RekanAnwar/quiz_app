@@ -5,8 +5,8 @@ async function main() {
     console.log("📋 Generating ABI files for Flutter integration...\n");
 
     // Get the compiled artifacts
-    const rewardArtifact = require('../artifacts/contracts/QuizRewardDistributor.sol/QuizRewardDistributor.json');
-    const tokenArtifact = require('../artifacts/contracts/QuizToken.sol/QuizToken.json');
+    const rewardArtifact = require('../artifacts/contracts/GuessRewardDistributor.sol/GuessRewardDistributor.json');
+    const tokenArtifact = require('../artifacts/contracts/GuessToken.sol/GuessToken.json');
 
     // Extract the ABI
     const rewardAbi = rewardArtifact.abi;
@@ -48,7 +48,7 @@ async function main() {
     });
 
     // Generate Dart files
-    const rewardAbiDart = `// Quiz Reward Contract ABI
+    const rewardAbiDart = `// Game Reward Contract ABI
 const String rewardContractAbi = '''
 ${JSON.stringify(rewardFunctions, null, 2)}
 ''';

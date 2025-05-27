@@ -1,4 +1,4 @@
-package com.quizapp.quiz_app
+package com.guessgame.guess_game
 
 import io.flutter.embedding.android.FlutterActivity
 
