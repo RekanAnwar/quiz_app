@@ -1,6 +1,7 @@
 class AppConstants {
   // Ethereum Sepolia Testnet Configuration
-  static const String sepoliaRpcUrl = 'https://ethereum-sepolia-rpc.publicnode.com';
+  static const String sepoliaRpcUrl =
+      'https://ethereum-sepolia-rpc.publicnode.com';
   static const int sepoliaChainId = 11155111;
   static const String sepoliaExplorer = 'https://sepolia.etherscan.io/';
 
@@ -28,8 +29,8 @@ class AppConstants {
   static const double defaultRadius = 12.0;
 
   // Colors
-  static const int primaryColorValue = 0xFF6366F1;
-  static const int accentColorValue = 0xFF10B981;
+  static const int primaryColorValue = 0xFF4CAF50;
+  static const int accentColorValue = 0xFF8BC34A;
   static const int errorColorValue = 0xFFEF4444;
   static const int warningColorValue = 0xFFF59E0B;
 
