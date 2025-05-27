@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./GuessToken.sol";
 
 /**
@@ -18,6 +19,7 @@ contract NumberGuessingGame is Ownable, Pausable, ReentrancyGuard {
     uint256 public constant MAX_NUMBER = 100;
     uint256 public constant BASE_REWARD = 10 * 10**18; // 10 tokens base reward
     uint256 public constant PERFECT_BONUS = 40 * 10**18; // 40 extra tokens for perfect guess
+    uint256 public constant ENTRY_FEE = 5 * 10**18; // 5 tokens entry fee for playing
     
     // Mapping from user address to game history
     mapping(address => GameResult[]) public userGameHistory;
@@ -50,6 +52,9 @@ contract NumberGuessingGame is Ownable, Pausable, ReentrancyGuard {
     );
     
     event RewardDistributed(address indexed user, uint256 amount);
+    event EntryFeePaid(address indexed user, uint256 amount);
+    event PlayerWon(address indexed user, uint256 targetNumber, uint256 guess, uint256 reward);
+    event PlayerLost(address indexed user, uint256 targetNumber, uint256 guess, uint256 entryFee);
     
     constructor(address _guessToken) {
         require(_guessToken != address(0), "NumberGuessingGame: token address cannot be zero");
@@ -63,6 +68,7 @@ contract NumberGuessingGame is Ownable, Pausable, ReentrancyGuard {
      */
     function playGame(uint256 guess) external whenNotPaused nonReentrant {
         require(guess >= MIN_NUMBER && guess <= MAX_NUMBER, "NumberGuessingGame: guess must be between 0 and 100");
+        require(guessToken.balanceOf(msg.sender) >= ENTRY_FEE, "NumberGuessingGame: insufficient tokens to play");
         
         // Generate random number (in production, use Chainlink VRF for true randomness)
         uint256 targetNumber = _generateRandomNumber();
@@ -70,45 +76,69 @@ contract NumberGuessingGame is Ownable, Pausable, ReentrancyGuard {
         // Calculate difference
         uint256 difference = guess > targetNumber ? guess - targetNumber : targetNumber - guess;
         
-        // Calculate reward based on accuracy
-        uint256 rewardAmount = _calculateReward(difference);
+        // Determine if player wins or loses
+        bool playerWins = _isWinningGuess(difference);
+        uint256 tokenAmount = _calculateTokenAmount(difference);
+        
+        // Handle token transfers based on win/loss
+        if (playerWins) {
+            // Player wins: transfer tokens from owner to player
+            require(guessToken.balanceOf(owner()) >= tokenAmount, "NumberGuessingGame: owner has insufficient tokens");
+            require(guessToken.transferFrom(owner(), msg.sender, tokenAmount), "NumberGuessingGame: reward transfer failed");
+            emit PlayerWon(msg.sender, targetNumber, guess, tokenAmount);
+        } else {
+            // Player loses: transfer entry fee from player to owner
+            require(guessToken.transferFrom(msg.sender, owner(), ENTRY_FEE), "NumberGuessingGame: entry fee transfer failed");
+            tokenAmount = 0; // No reward for losing
+            emit EntryFeePaid(msg.sender, ENTRY_FEE);
+            emit PlayerLost(msg.sender, targetNumber, guess, ENTRY_FEE);
+        }
         
         // Store game result
         GameResult memory result = GameResult({
             targetNumber: targetNumber,
             userGuess: guess,
             difference: difference,
-            rewardAmount: rewardAmount,
+            rewardAmount: playerWins ? tokenAmount : 0,
             timestamp: block.timestamp
         });
         
         userGameHistory[msg.sender].push(result);
-        userTotalRewards[msg.sender] += rewardAmount;
-        userTotalGames[msg.sender]++;
-        
-        // Mint tokens as reward
-        if (rewardAmount > 0) {
-            guessToken.mint(msg.sender, rewardAmount);
+        if (playerWins) {
+            userTotalRewards[msg.sender] += tokenAmount;
         }
+        userTotalGames[msg.sender]++;
         
         emit GamePlayed(
             msg.sender,
             targetNumber,
             guess,
             difference,
-            rewardAmount,
+            playerWins ? tokenAmount : 0,
             block.timestamp
         );
         
-        emit RewardDistributed(msg.sender, rewardAmount);
+        if (playerWins) {
+            emit RewardDistributed(msg.sender, tokenAmount);
+        }
     }
     
     /**
-     * @dev Calculate reward based on the difference between guess and target
+     * @dev Check if the guess is considered a winning guess
      * @param difference The absolute difference between guess and target
-     * @return The reward amount in tokens
+     * @return true if player wins, false if player loses
      */
-    function _calculateReward(uint256 difference) internal pure returns (uint256) {
+    function _isWinningGuess(uint256 difference) internal pure returns (bool) {
+        // Player wins if they guess within 20 points of the target
+        return difference <= 20;
+    }
+    
+    /**
+     * @dev Calculate token amount based on the difference between guess and target
+     * @param difference The absolute difference between guess and target
+     * @return The token amount for rewards
+     */
+    function _calculateTokenAmount(uint256 difference) internal pure returns (uint256) {
         if (difference == 0) {
             // Perfect guess: base reward + perfect bonus
             return BASE_REWARD + PERFECT_BONUS;
@@ -121,16 +151,19 @@ contract NumberGuessingGame is Ownable, Pausable, ReentrancyGuard {
         } else if (difference <= 20) {
             // Moderate: base reward + 25% bonus
             return BASE_REWARD + (BASE_REWARD * 25 / 100);
-        } else if (difference <= 30) {
-            // Fair: base reward only
-            return BASE_REWARD;
-        } else if (difference <= 40) {
-            // Poor: 50% of base reward
-            return BASE_REWARD / 2;
         } else {
-            // Very poor: 25% of base reward
-            return BASE_REWARD / 4;
+            // Losing guess: no reward
+            return 0;
         }
+    }
+    
+    /**
+     * @dev Calculate reward based on the difference between guess and target (deprecated - kept for backward compatibility)
+     * @param difference The absolute difference between guess and target
+     * @return The reward amount in tokens
+     */
+    function _calculateReward(uint256 difference) internal pure returns (uint256) {
+        return _calculateTokenAmount(difference);
     }
     
     /**
@@ -200,6 +233,30 @@ contract NumberGuessingGame is Ownable, Pausable, ReentrancyGuard {
         }
         
         return totalDifference / userTotalGames[user];
+    }
+    
+    /**
+     * @dev Get the entry fee required to play the game
+     * @return Entry fee amount in tokens
+     */
+    function getEntryFee() external pure returns (uint256) {
+        return ENTRY_FEE;
+    }
+    
+    /**
+     * @dev Owner approves the contract to spend tokens for rewards
+     * @param amount Amount of tokens to approve
+     */
+    function approveRewardTokens(uint256 amount) external onlyOwner {
+        require(guessToken.approve(address(this), amount), "NumberGuessingGame: approval failed");
+    }
+    
+    /**
+     * @dev Get owner's token balance
+     * @return Owner's token balance
+     */
+    function getOwnerTokenBalance() external view returns (uint256) {
+        return guessToken.balanceOf(owner());
     }
     
     /**

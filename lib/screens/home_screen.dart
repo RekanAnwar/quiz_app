@@ -207,8 +207,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Guess a number between 0 and 100. The closer your guess is to the target number, the more tokens you win!',
+              'Guess a number between 0 and 100!\n🎯 Win: Within 20 points = receive 12.5-50 tokens\n💸 Lose: More than 20 points = pay 5 tokens entry fee\n\nTokens come from/go to the game owner!',
               textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -236,8 +237,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Enter a number between 0 and 100:',
+                'Enter a number between 0 and 100:\n\n💸 Entry Fee: 5 GUESS tokens (paid if you lose)\n🎯 Potential Reward: 12.5-50 GUESS tokens (received if you win)',
                 textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 24),
               TextFormField(
@@ -308,19 +310,20 @@ class _HomeScreenState extends State<HomeScreen> {
     final result = appProvider.lastGameResult!;
     final difference = result.difference;
 
+    bool playerWon = difference <= 20;
     String resultMessage;
-    if (difference == 0) {
-      resultMessage = 'Perfect! Exact match!';
-    } else if (difference <= 5) {
-      resultMessage = 'Amazing! Very close!';
-    } else if (difference <= 10) {
-      resultMessage = 'Great! Close guess!';
-    } else if (difference <= 20) {
-      resultMessage = 'Good! Not too far off!';
-    } else if (difference <= 30) {
-      resultMessage = 'Not bad! Keep trying!';
+    if (playerWon) {
+      if (difference == 0) {
+        resultMessage = '🎉 YOU WON! Perfect match!';
+      } else if (difference <= 5) {
+        resultMessage = '🎉 YOU WON! Amazing! Very close!';
+      } else if (difference <= 10) {
+        resultMessage = '🎉 YOU WON! Great! Close guess!';
+      } else {
+        resultMessage = '🎉 YOU WON! Good! Not too far off!';
+      }
     } else {
-      resultMessage = 'Try again for a better score!';
+      resultMessage = '💔 YOU LOST! Try again for a better score!';
     }
 
     return Card(
@@ -361,14 +364,24 @@ class _HomeScreenState extends State<HomeScreen> {
               style: const TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 16),
-            Text(
-              'Reward: ${result.rewardAmount} TOKEN',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
+            if (playerWon)
+              Text(
+                'Reward: +${result.rewardAmount} TOKEN',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              )
+            else
+              const Text(
+                'Entry Fee: -5 TOKEN',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
               ),
-            ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
@@ -385,18 +398,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Color _getResultColor(GameResult result) {
     final difference = result.difference;
-    if (difference == 0) {
-      return Colors.purple;
-    } else if (difference <= 5) {
-      return Colors.blue;
-    } else if (difference <= 10) {
-      return Colors.green;
-    } else if (difference <= 20) {
-      return Colors.amber;
-    } else if (difference <= 30) {
-      return Colors.orange;
+    bool playerWon = difference <= 20;
+
+    if (playerWon) {
+      if (difference == 0) {
+        return Colors.purple; // Perfect
+      } else if (difference <= 5) {
+        return Colors.blue; // Excellent
+      } else if (difference <= 10) {
+        return Colors.green; // Great
+      } else {
+        return Colors.amber; // Good
+      }
     } else {
-      return Colors.red;
+      return Colors.red; // Lost
     }
   }
 }
