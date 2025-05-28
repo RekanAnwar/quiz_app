@@ -141,6 +141,14 @@ The app uses the Provider pattern for centralized state management:
   - Coordinates with Web3Service for blockchain interactions
   - Manages loading states and error handling
   - Stores game statistics and history
+  - **Enhanced Balance Updates**: Automatic token balance refresh with retry logic
+  - **Gasless UX**: Simplified state management focused on token rewards only
+
+**Balance Update Features**:
+- **Automatic Refresh**: Balance updates after every game transaction
+- **Retry Mechanism**: Up to 3 attempts with increasing delays for reliable updates
+- **Multiple Triggers**: Balance refreshes on game completion, result clearing, and manual refresh
+- **Error Resilience**: Continues to attempt balance updates even if game result retrieval fails
 
 ### UI/UX Design
 
@@ -150,6 +158,8 @@ The app uses the Provider pattern for centralized state management:
 - **Loading States**: Smooth loading animations during blockchain transactions
 - **Error Handling**: User-friendly error messages and recovery options
 - **Dark/Light Theme**: Automatic theme switching based on system preferences
+- **Gasless Interface**: Simplified UI showing only GUESS token balance (no ETH needed)
+- **Automatic Updates**: Real-time balance refresh without app restart required
 
 ## Backend (Smart Contracts)
 
@@ -221,6 +231,7 @@ The app uses the Provider pattern for centralized state management:
 - **Centralized Signing**: Uses a hardcoded game manager private key for all transactions
 - **Gasless Gaming**: Players don't need ETH or wallet setup - all gas fees paid by game manager
 - **Transaction Processing**: Handles game transactions and confirmations on behalf of users
+- **Token Balance Management**: Retrieves GUESS token balances for users
 - **Error Handling**: Comprehensive error handling for blockchain operations
 - **Gas Management**: Appropriate gas limits for contract interactions
 
@@ -229,16 +240,22 @@ The app uses the Provider pattern for centralized state management:
 - Game manager address: `0xA720e09cfB31fcd03d74992373AEcF0818F111Af`
 - Users provide only their address for reward distribution
 - No wallet connection required from users
+- **Simplified Architecture**: Removed ETH balance tracking and complex transaction monitoring for streamlined gasless experience
 
 ### Storage Service
 
-`storage_service.dart` manages local data persistence:
+`storage_service.dart` manages local data persistence with a simplified approach:
 
 - **User Address Storage**: Stores user's Ethereum address for reward distribution
-- **Game History**: Local tracking of user's game results and statistics
 - **User Preferences**: Saves app settings and preferences
 - **Session Management**: Handles user session state
 - **Data Clearing**: Clean data removal when user resets or changes address
+- **Simplified Design**: Removed complex temporary game state management for better performance
+
+**Streamlined Functions**:
+- Essential wallet address management only
+- No complex JSON state persistence
+- Focus on core functionality for gasless gaming model
 
 ## Deployment Information
 
@@ -379,6 +396,12 @@ To connect to the game, add Sepolia testnet to your wallet:
 5. **Blockchain Processing**: Smart contract generates random number and calculates results
 6. **Reward Distribution**: Winners automatically receive GUESS tokens at their provided address
 7. **Result Display**: Game shows target number, difference, and reward earned
+8. **Balance Update**: Token balance automatically refreshes to show new rewards
+
+**Enhanced User Experience**:
+- **No App Restart Needed**: Balance updates automatically after each game
+- **Reliable Updates**: Retry mechanism ensures balance reflects latest rewards
+- **Instant Feedback**: Users see their token rewards immediately upon winning
 
 ### Transaction Architecture
 
