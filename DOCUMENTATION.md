@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-The Web3 Number Guessing Game is a blockchain-based application built with Flutter and Solidity where players guess numbers between 0-100 and earn GUESS tokens based on their accuracy. The game leverages Ethereum smart contracts to handle game logic and token distribution in a transparent and decentralized manner.
+The Web3 Number Guessing Game is a blockchain-based application built with Flutter and Solidity where players guess numbers between 0-100 and earn GUESS tokens based on their accuracy. The game leverages Ethereum smart contracts to handle game logic and token distribution in a transparent and decentralized manner. **The game is completely free-to-play** - players only receive rewards when they win, and there are no entry fees.
 
 ## Table of Contents
 
@@ -26,17 +26,19 @@ The Web3 Number Guessing Game is a blockchain-based application built with Flutt
 6. [Game Mechanics](#game-mechanics)
    - [Gameplay](#gameplay)
    - [Reward Structure](#reward-structure)
-7. [Testing](#testing)
-8. [Known Issues & Limitations](#known-issues--limitations)
-9. [Future Improvements](#future-improvements)
+7. [Development Scripts](#development-scripts)
+8. [Testing](#testing)
+9. [Known Issues & Limitations](#known-issues--limitations)
+10. [Future Improvements](#future-improvements)
 
 ## Architecture
 
 The project follows a client-server architecture with:
 
-- **Client**: Flutter mobile application
+- **Client**: Flutter mobile application (guess_game)
 - **Backend**: Ethereum blockchain with smart contracts
 - **Integration**: Web3Dart library to connect the Flutter app with the blockchain
+- **Network**: Deployed on Sepolia Testnet for testing
 
 ### High-Level Architecture Diagram
 
@@ -44,7 +46,7 @@ The project follows a client-server architecture with:
 +------------------------+        +------------------------+
 |                        |        |                        |
 |   Flutter Application  |<------>|  Ethereum Blockchain   |
-|                        |        |                        |
+|      (guess_game)      |        |    (Sepolia Testnet)   |
 +------------------------+        +------------------------+
         |                                 |
         v                                 v
@@ -62,12 +64,28 @@ The project follows a client-server architecture with:
 
 ```
 lib/
-├── constants/          # App constants and configuration
-├── contracts/          # ABI definitions for smart contracts
+├── constants/          # App constants and contract addresses
+│   ├── app_constants.dart      # Main app constants
+│   └── constants.dart          # Export file
+├── contracts/          # ABI definitions and contract config
+│   ├── contract_config.dart    # Contract addresses and network config
+│   ├── erc20_abi.dart         # ERC-20 token ABI
+│   ├── game_contract_abi.dart # Game contract ABI
+│   └── contracts.dart         # Export file
 ├── models/             # Data models
+│   ├── game_result.dart       # Game result data structure
+│   └── models.dart            # Export file
 ├── providers/          # State management
+│   ├── app_provider.dart      # Main app state provider
+│   └── providers.dart         # Export file
 ├── screens/            # UI screens
-├── services/           # Web3 and storage services
+│   ├── home_screen.dart       # Main game interface
+│   └── screens.dart           # Export file
+├── services/           # Business logic services
+│   ├── web3_service.dart      # Blockchain interaction service
+│   ├── storage_service.dart   # Local storage management
+│   └── services.dart          # Export file
+├── lib.dart            # Main library export
 └── main.dart           # App entry point
 ```
 
@@ -75,117 +93,138 @@ lib/
 
 1. **Main Application** (`main.dart`):
    - Entry point for the Flutter application
-   - Configures theme, providers, and navigation
-   - Initializes the application state
+   - Configures Material Design 3 theme (light/dark mode)
+   - Sets up Provider state management
+   - Initializes the application
 
 2. **Home Screen** (`screens/home_screen.dart`):
-   - Primary user interface
-   - Handles wallet connection, game play, and result display
-   - Adapts UI based on game state (not started, in progress, results)
+   - Primary user interface for the game
+   - Handles wallet connection state
+   - Game play interface with number input
+   - Real-time result display with performance indicators
+   - Statistics display (games played, total rewards, accuracy)
 
 3. **Game Result Model** (`models/game_result.dart`):
-   - Represents the outcome of a game
+   - Represents the outcome of a single game
    - Stores target number, user guess, difference, reward amount, and timestamp
-   - Provides helper methods for calculating accuracy and performance level
 
 ### State Management
 
-The app uses the Provider pattern for state management:
+The app uses the Provider pattern for centralized state management:
 
 - **AppProvider** (`providers/app_provider.dart`):
-  - Centralized state container
-  - Manages wallet connection state
-  - Handles game state (initialization, playing, results)
+  - Manages wallet connection state and user address
+  - Handles game state (idle, playing, showing results)
   - Coordinates with Web3Service for blockchain interactions
-  - Manages user settings (theme, notifications)
+  - Manages loading states and error handling
+  - Stores game statistics and history
 
 ### UI/UX Design
 
-- Uses Material Design 3 with customized themes for light and dark modes
-- Responsive layout adapting to different screen sizes
-- Interactive UI elements with appropriate feedback
-- Game results visualized with color-coded indicators
+- **Material Design 3**: Modern design system with Material You theming
+- **Responsive Layout**: Adapts to different screen sizes and orientations
+- **Color-coded Results**: Performance indicators with intuitive color schemes
+- **Loading States**: Smooth loading animations during blockchain transactions
+- **Error Handling**: User-friendly error messages and recovery options
+- **Dark/Light Theme**: Automatic theme switching based on system preferences
 
 ## Backend (Smart Contracts)
 
 ### Token Contract
 
-`GuessToken.sol` is an ERC-20 token contract with:
+`GuessToken.sol` - ERC-20 token contract with enhanced features:
 
 - **Token Details**:
   - Name: Guess Token
   - Symbol: GUESS
   - Decimals: 18
   - Max Supply: 1,000,000 tokens
+  - Initial Owner Supply: 100,000 tokens
 
 - **Key Features**:
-  - Minting capability by authorized addresses
-  - Role-based access control for minters
-  - Pausable for emergency situations
-  - Burning functionality
+  - **Minting System**: Role-based minting with owner control
+  - **Access Control**: Minter role management (add/remove minters)
+  - **Pausable**: Emergency pause functionality
+  - **Burning**: Token holders can burn their tokens
+  - **Supply Cap**: Hard cap at 1 million tokens
+
+- **Security Features**:
+  - OpenZeppelin standard implementation
+  - Pause functionality for emergency situations
+  - Role-based access control
 
 ### Game Contract
 
-`NumberGuessingGame.sol` handles the core game logic:
+`NumberGuessingGame.sol` - Main game logic contract:
 
 - **Game Mechanics**:
-  - Random number generation (pseudo-random for testing)
-  - Guess validation and difference calculation
-  - Reward calculation based on accuracy
-  - Game history tracking per user
+  - **Free-to-Play**: No entry fees, players only receive rewards for winning
+  - **Random Number Generation**: Pseudo-random (use Chainlink VRF for production)
+  - **Winning Condition**: Guesses within 20 points of target are considered wins
+  - **Automatic Rewards**: Winners receive tokens automatically
 
 - **Key Functions**:
-  - `playGame(uint256 guess)`: Processes a user's guess
-  - `getUserGameHistory(address user)`: Retrieves a user's past games
-  - `getLatestGameResult(address user)`: Gets the most recent game result
-  - `getUserTotalRewards(address user)`: Gets total rewards earned
-  - `getUserAverageAccuracy(address user)`: Calculates average guess accuracy
+  - `playGame(uint256 guess)`: Main game function (free to play)
+  - `getUserGameHistory(address user)`: Retrieves complete game history
+  - `getLatestGameResult(address user)`: Gets the most recent game
+  - `getUserTotalRewards(address user)`: Total rewards earned
+  - `getUserTotalGames(address user)`: Total games played
+  - `getUserAverageAccuracy(address user)`: Average guess accuracy
+
+- **Reward Structure**:
+  - Perfect Guess (0 difference): 50 GUESS tokens (10 base + 40 bonus)
+  - Excellent (≤5 difference): 17.5 GUESS tokens (10 + 75% bonus)
+  - Very Good (≤10 difference): 15 GUESS tokens (10 + 50% bonus)
+  - Good (≤20 difference): 12.5 GUESS tokens (10 + 25% bonus)
+  - Poor (>20 difference): 0 GUESS tokens (loss, but free to play)
 
 ### Security Considerations
 
-- Uses OpenZeppelin libraries for secure implementation patterns
-- Implements reentrancy protection with ReentrancyGuard
-- Includes access control for administrative functions
-- Pausable functionality for emergency situations
-- NOTE: The random number generation is pseudo-random and not suitable for production; Chainlink VRF is recommended for true randomness
+- **OpenZeppelin Libraries**: Uses audited, battle-tested contract libraries
+- **Reentrancy Protection**: ReentrancyGuard on all state-changing functions
+- **Access Control**: Owner-only functions for contract administration
+- **Pausable Contracts**: Emergency pause functionality
+- **Input Validation**: Strict validation of all user inputs
+- **Safe Math**: Built-in overflow protection in Solidity 0.8+
 
 ## Integration Layer
 
 ### Web3 Service
 
-`web3_service.dart` handles blockchain interactions:
+`web3_service.dart` handles all blockchain interactions:
 
-- Initializes and manages Web3 client connection
-- Loads and interacts with smart contracts
-- Manages wallet connection state
-- Processes transactions and retrieves blockchain data
-- Handles error cases and transaction confirmations
+- **Connection Management**: Initializes Web3 client with Sepolia testnet
+- **Contract Interaction**: Loads and interacts with deployed smart contracts
+- **Wallet Integration**: Manages wallet connection state
+- **Transaction Processing**: Handles game transactions and confirmations
+- **Error Handling**: Comprehensive error handling for blockchain operations
+- **Gas Management**: Appropriate gas limits for contract interactions
 
 ### Storage Service
 
 `storage_service.dart` manages local data persistence:
 
-- Stores wallet address for reconnection
-- Saves user preferences
-- Manages temporary game state
-- Handles user data clearing when disconnecting
+- **Wallet Persistence**: Stores connected wallet address
+- **User Preferences**: Saves app settings and preferences
+- **Session Management**: Handles user session state
+- **Data Clearing**: Clean data removal when disconnecting wallet
 
 ## Getting Started
 
 ### Prerequisites
 
-- Flutter SDK (3.8.0+)
-- Node.js (16+)
-- Hardhat for smart contract development
-- Ethereum wallet (like MetaMask)
-- Sepolia testnet ETH for testing
+- **Flutter SDK**: 3.7.0 or higher
+- **Node.js**: 16.0 or higher
+- **Git**: For version control
+- **Ethereum Wallet**: MetaMask or compatible Web3 wallet
+- **Sepolia ETH**: For testing transactions (free from faucets)
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd guess_game
+   cd quiz_app
    ```
 
 2. **Install Flutter dependencies**
@@ -202,84 +241,155 @@ The app uses the Provider pattern for state management:
 
 ### Deployment
 
-1. **Configure network** (edit `smart-contracts/hardhat.config.js`)
+1. **Configure Environment** (edit `smart-contracts/hardhat.config.js`)
    ```javascript
    networks: {
      sepolia: {
-       url: "YOUR_RPC_URL",
+       url: "YOUR_SEPOLIA_RPC_URL",
        accounts: ["YOUR_PRIVATE_KEY"]
      }
    }
    ```
 
-2. **Deploy contracts**
+2. **Deploy Contracts**
    ```bash
    cd smart-contracts
-   npx hardhat run scripts/deploy.js --network sepolia
+   npx hardhat run scripts/deploy-testnet.js --network sepolia
    ```
 
-3. **Update contract addresses** in `lib/constants/app_constants.dart`
+3. **Update Contract Addresses** in `lib/constants/app_constants.dart`:
+   ```dart
+   static const String guessTokenContractAddress = 'NEW_TOKEN_ADDRESS';
+   static const String gameContractAddress = 'NEW_GAME_ADDRESS';
+   ```
+
+4. **Generate ABI Files**
+   ```bash
+   cd smart-contracts
+   npx hardhat run scripts/generate-abi.js
+   ```
+
+5. **Run the App**
+   ```bash
+   flutter run
+   ```
 
 ## Game Mechanics
 
 ### Gameplay
 
-1. User connects their Ethereum wallet
-2. User starts a new game and enters a guess between 0-100
-3. Smart contract generates a random number
-4. Difference between the guess and target is calculated
-5. Rewards are distributed based on accuracy
-6. Results are displayed to the user
+1. **Wallet Connection**: User connects Web3 wallet (no registration required)
+2. **Game Start**: User initiates a new game (completely free)
+3. **Number Input**: User enters a guess between 0-100
+4. **Blockchain Processing**: Smart contract generates random number and calculates results
+5. **Reward Distribution**: Winners automatically receive GUESS tokens
+6. **Result Display**: Game shows target number, difference, and reward earned
 
 ### Reward Structure
 
-| Performance | Difference | Reward |
-|-------------|------------|--------|
-| Perfect     | 0          | 50 GUESS tokens |
-| Excellent   | ≤5         | 17.5 GUESS tokens |
-| Very Good   | ≤10        | 15 GUESS tokens |
-| Good        | ≤20        | 12.5 GUESS tokens |
-| Fair        | ≤30        | 10 GUESS tokens |
-| Poor        | ≤40        | 5 GUESS tokens |
-| Very Poor   | >40        | 2.5 GUESS tokens |
+The game uses a tiered reward system based on guess accuracy:
 
-#### Reward Structure Example
+| Performance Level | Difference Range | Reward Amount | Description |
+|------------------|------------------|---------------|-------------|
+| Perfect          | 0                | 50 GUESS      | Exact match - maximum reward |
+| Excellent        | 1-5              | 17.5 GUESS    | Very close guess |
+| Very Good        | 6-10             | 15 GUESS      | Close guess |
+| Good             | 11-20            | 12.5 GUESS    | Moderate accuracy |
+| Loss             | 21+              | 0 GUESS       | No reward, but free to play |
 
-**Scenario**: The target number is 42
+#### Example Scenarios
+
+**Target Number: 42**
 
 | Player | Guess | Difference | Performance | Reward |
-|--------|-------|------------|------------|--------|
-| Alice  | 42    | 0          | Perfect    | 50 GUESS tokens |
-| Bob    | 46    | 4          | Excellent  | 17.5 GUESS tokens |
-| Carol  | 51    | 9          | Very Good  | 15 GUESS tokens |
-| Dave   | 60    | 18         | Good       | 12.5 GUESS tokens |
-| Eve    | 72    | 30         | Fair       | 10 GUESS tokens |
-| Frank  | 82    | 40         | Poor       | 5 GUESS tokens |
-| Grace  | 98    | 56         | Very Poor  | 2.5 GUESS tokens |
+|--------|-------|------------|-------------|--------|
+| Alice  | 42    | 0          | Perfect     | 50 GUESS |
+| Bob    | 46    | 4          | Excellent   | 17.5 GUESS |
+| Carol  | 51    | 9          | Very Good   | 15 GUESS |
+| Dave   | 60    | 18         | Good        | 12.5 GUESS |
+| Eve    | 72    | 30         | Loss        | 0 GUESS |
 
-The smart contract calculates the absolute difference between the player's guess and the target number, then awards tokens according to the established reward tiers.
+## Development Scripts
+
+The project includes essential development scripts in `smart-contracts/scripts/`:
+
+### Essential Scripts (Kept)
+
+1. **`deploy-testnet.js`**:
+   - Main deployment script for testnet deployment
+   - Deploys both GuessToken and NumberGuessingGame contracts
+   - Sets up initial token approvals
+   - Provides comprehensive deployment information and next steps
+
+2. **`generate-abi.js`**:
+   - Generates ABI files for Flutter integration
+   - Creates filtered ABIs with only necessary functions
+   - Outputs Dart files for contract interaction
+
+3. **`check-balance.js`**:
+   - Simple utility to check account balance
+   - Useful for verifying wallet funding before deployment
+
+### Removed Scripts
+
+The following development and testing scripts have been removed to keep the codebase clean:
+- All `test-*.js` files (18 test scripts)
+- Debug scripts (`debug-*.js`, `check-transactions.js`)
+- Demo scripts (`demo-*.js`)
+- Fix scripts (`fix-*.js`)
+- Old deployment scripts (`deploy-updated-contract.js`)
+- Utility scripts (`transfer-tokens.js`, `show-test-addresses.js`)
 
 ## Testing
 
-The application can be tested using:
+### Frontend Testing
+- **Unit Tests**: Test individual components and services
+- **Widget Tests**: Test UI components and user interactions
+- **Integration Tests**: Test complete user flows
 
-1. **Flutter tests** for the frontend
-2. **Hardhat tests** for the smart contracts
-3. **Manual testing** on the Sepolia testnet
+### Smart Contract Testing
+- **Hardhat Tests**: Comprehensive contract testing
+- **Network Testing**: Live testing on Sepolia testnet
+- **Security Testing**: Audit contract security features
+
+### Manual Testing
+1. Connect different wallet types
+2. Test various guess scenarios
+3. Verify reward calculations
+4. Test error handling
 
 ## Known Issues & Limitations
 
-- Random number generation in the contract is not truly random (pseudo-random)
-- Gas costs may be high for frequent game plays
-- UI optimized primarily for mobile devices
-- Limited support for older versions of Flutter
+### Smart Contract Limitations
+- **Pseudo-Random Numbers**: Current implementation uses block-based randomness (not production-ready)
+- **Gas Costs**: Transaction fees apply for each game (use layer 2 for lower costs)
+- **Centralized Rewards**: Owner must fund the contract with tokens for rewards
+
+### Frontend Limitations
+- **Mobile Focus**: UI optimized primarily for mobile devices
+- **Wallet Support**: Limited to Web3-compatible wallets
+- **Network Dependency**: Requires stable internet connection
+
+### General Limitations
+- **Testnet Only**: Currently deployed on Sepolia testnet
+- **Token Distribution**: Manual token distribution to contract for rewards
 
 ## Future Improvements
 
-- Implement Chainlink VRF for true randomness
-- Add multiplayer functionality
-- Implement leader boards and tournaments
-- Add social sharing features
-- Support more wallet providers
-- Add analytics and gameplay statistics
-- Optimize gas usage for lower transaction costs 
+### Short-term Improvements
+- **Chainlink VRF Integration**: Implement truly random number generation
+- **Layer 2 Deployment**: Deploy on Polygon or Arbitrum for lower gas costs
+- **Improved UI**: Enhanced mobile and web responsiveness
+
+### Medium-term Features
+- **Multiplayer Games**: Real-time multiplayer guessing competitions
+- **Leaderboards**: Global and weekly leaderboards
+- **Social Features**: Share results and challenge friends
+- **Achievement System**: Badges and achievements for milestones
+
+### Long-term Vision
+- **Tournament System**: Organized tournaments with bigger rewards
+- **NFT Integration**: Special NFT rewards for top performers
+- **Cross-chain Support**: Multi-chain deployment for broader accessibility
+- **Advanced Analytics**: Detailed player statistics and performance tracking
+- **Governance Token**: Community governance for game parameters 
