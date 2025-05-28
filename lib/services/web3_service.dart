@@ -130,7 +130,7 @@ class Web3Service {
 
     try {
       _ensureInitialized();
-      developer.log('Playing game with guess: $guess');
+      developer.log('Playing game with guess: $guess for user: $_userAddress');
 
       // Check if game is paused
       final result = await _web3Client!.call(
@@ -144,11 +144,10 @@ class Web3Service {
         throw Exception('Game is currently paused');
       }
 
-      // Get credentials (this should be handled by MetaMask in production)
+      // Get credentials for the game manager (owner pays gas fees)
       if (ContractConfig.gameManagerPrivateKey == 'YOUR_PRIVATE_KEY_HERE') {
         throw Exception(
-          'Game play requires user wallet connection. '
-          'Please connect your MetaMask wallet.',
+          'Game play requires owner credentials to be configured.',
         );
       }
 
@@ -156,18 +155,28 @@ class Web3Service {
         ContractConfig.gameManagerPrivateKey,
       );
 
-      // Prepare the transaction
+      // Use playGameForUser function - owner pays gas, game recorded under user address
+      final playGameForUserFunction = _gameContract!.function(
+        'playGameForUser',
+      );
+
+      // Prepare the transaction - pass user address and guess
       final transaction = Transaction.callContract(
         contract: _gameContract!,
-        function: _playGameFunction!,
-        parameters: [BigInt.from(guess)],
+        function: playGameForUserFunction,
+        parameters: [
+          EthereumAddress.fromHex(_userAddress!), // User's address
+          BigInt.from(guess), // User's guess
+        ],
         maxGas: 300000,
         gasPrice: EtherAmount.inWei(BigInt.from(20000000000)), // 20 gwei
       );
 
-      developer.log('Sending play game transaction...');
+      developer.log('Sending playGameForUser transaction...');
+      developer.log('User address: $_userAddress');
+      developer.log('Guess: $guess');
 
-      // Send the transaction
+      // Send the transaction (owner pays gas, game recorded under user)
       final txHash = await _web3Client!.sendTransaction(
         credentials,
         transaction,
@@ -175,6 +184,9 @@ class Web3Service {
       );
 
       developer.log('✅ Game transaction sent: $txHash');
+      developer.log(
+        '✅ Owner paid gas, game recorded under user: $_userAddress',
+      );
       return txHash;
     } catch (e) {
       developer.log('❌ Error playing game: $e');

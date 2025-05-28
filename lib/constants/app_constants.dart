@@ -18,5 +18,5 @@ class AppConstants {
   static const String guessTokenContractAddress =
       '0x2AC923843d160A63877b83EC7bC69027C97bc45e'; // GuessToken (ERC-20)
   static const String gameContractAddress =
-      '0x2a7081a264DDF15f9e43B237967F3599D743B0f5'; // NumberGuessingGame (Free-to-Play)
+      '0xa106300c8eFaF15C7e2487B3607c4d265f8b0573'; // NumberGuessingGame (Updated with playGameForUser)
 }

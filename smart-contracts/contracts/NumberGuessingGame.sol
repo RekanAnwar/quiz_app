@@ -117,6 +117,64 @@ contract NumberGuessingGame is Ownable, Pausable, ReentrancyGuard {
     }
     
     /**
+     * @dev Play the number guessing game on behalf of a user - GASLESS FOR USERS!
+     * This allows the owner to pay gas fees while games are recorded under user's address
+     * @param user The user's address who is playing
+     * @param guess The user's guess (must be between 0 and 100)
+     */
+    function playGameForUser(address user, uint256 guess) external onlyOwner whenNotPaused nonReentrant {
+        require(user != address(0), "NumberGuessingGame: user address cannot be zero");
+        require(guess >= MIN_NUMBER && guess <= MAX_NUMBER, "NumberGuessingGame: guess must be between 0 and 100");
+        
+        // Generate random number (in production, use Chainlink VRF for true randomness)
+        uint256 targetNumber = _generateRandomNumber();
+        
+        // Calculate difference
+        uint256 difference = guess > targetNumber ? guess - targetNumber : targetNumber - guess;
+        
+        // Determine if player wins or loses
+        bool playerWins = _isWinningGuess(difference);
+        uint256 tokenAmount = _calculateTokenAmount(difference);
+        
+        // Handle token transfers based on win/loss
+        if (playerWins) {
+            // Player wins: transfer tokens from owner to user
+            require(guessToken.balanceOf(owner()) >= tokenAmount, "NumberGuessingGame: owner has insufficient tokens");
+            require(guessToken.transferFrom(owner(), user, tokenAmount), "NumberGuessingGame: reward transfer failed");
+            emit PlayerWon(user, targetNumber, guess, tokenAmount);
+            emit RewardDistributed(user, tokenAmount);
+        } else {
+            // Player loses: no payment required - completely free to play!
+            tokenAmount = 0; // No reward for losing
+            emit PlayerLost(user, targetNumber, guess);
+        }
+        
+        // Store game result under user's address
+        GameResult memory result = GameResult({
+            targetNumber: targetNumber,
+            userGuess: guess,
+            difference: difference,
+            rewardAmount: playerWins ? tokenAmount : 0,
+            timestamp: block.timestamp
+        });
+        
+        userGameHistory[user].push(result);
+        if (playerWins) {
+            userTotalRewards[user] += tokenAmount;
+        }
+        userTotalGames[user]++;
+        
+        emit GamePlayed(
+            user,
+            targetNumber,
+            guess,
+            difference,
+            playerWins ? tokenAmount : 0,
+            block.timestamp
+        );
+    }
+    
+    /**
      * @dev Check if the guess is considered a winning guess
      * @param difference The absolute difference between guess and target
      * @return true if player wins, false if player loses
