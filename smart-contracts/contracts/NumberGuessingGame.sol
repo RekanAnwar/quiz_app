@@ -10,6 +10,7 @@ import "./GuessToken.sol";
 /**
  * @title NumberGuessingGame
  * @dev Contract for a blockchain-based number guessing reward game
+ * Players can play for free and only receive rewards when they win
  */
 contract NumberGuessingGame is Ownable, Pausable, ReentrancyGuard {
     GuessToken public immutable guessToken;
@@ -19,7 +20,6 @@ contract NumberGuessingGame is Ownable, Pausable, ReentrancyGuard {
     uint256 public constant MAX_NUMBER = 100;
     uint256 public constant BASE_REWARD = 10 * 10**18; // 10 tokens base reward
     uint256 public constant PERFECT_BONUS = 40 * 10**18; // 40 extra tokens for perfect guess
-    uint256 public constant ENTRY_FEE = 5 * 10**18; // 5 tokens entry fee for playing
     
     // Mapping from user address to game history
     mapping(address => GameResult[]) public userGameHistory;
@@ -52,9 +52,8 @@ contract NumberGuessingGame is Ownable, Pausable, ReentrancyGuard {
     );
     
     event RewardDistributed(address indexed user, uint256 amount);
-    event EntryFeePaid(address indexed user, uint256 amount);
     event PlayerWon(address indexed user, uint256 targetNumber, uint256 guess, uint256 reward);
-    event PlayerLost(address indexed user, uint256 targetNumber, uint256 guess, uint256 entryFee);
+    event PlayerLost(address indexed user, uint256 targetNumber, uint256 guess);
     
     constructor(address _guessToken) {
         require(_guessToken != address(0), "NumberGuessingGame: token address cannot be zero");
@@ -63,12 +62,11 @@ contract NumberGuessingGame is Ownable, Pausable, ReentrancyGuard {
     }
     
     /**
-     * @dev Play the number guessing game
+     * @dev Play the number guessing game - FREE TO PLAY!
      * @param guess The user's guess (must be between 0 and 100)
      */
     function playGame(uint256 guess) external whenNotPaused nonReentrant {
         require(guess >= MIN_NUMBER && guess <= MAX_NUMBER, "NumberGuessingGame: guess must be between 0 and 100");
-        require(guessToken.balanceOf(msg.sender) >= ENTRY_FEE, "NumberGuessingGame: insufficient tokens to play");
         
         // Generate random number (in production, use Chainlink VRF for true randomness)
         uint256 targetNumber = _generateRandomNumber();
@@ -86,12 +84,11 @@ contract NumberGuessingGame is Ownable, Pausable, ReentrancyGuard {
             require(guessToken.balanceOf(owner()) >= tokenAmount, "NumberGuessingGame: owner has insufficient tokens");
             require(guessToken.transferFrom(owner(), msg.sender, tokenAmount), "NumberGuessingGame: reward transfer failed");
             emit PlayerWon(msg.sender, targetNumber, guess, tokenAmount);
+            emit RewardDistributed(msg.sender, tokenAmount);
         } else {
-            // Player loses: transfer entry fee from player to owner
-            require(guessToken.transferFrom(msg.sender, owner(), ENTRY_FEE), "NumberGuessingGame: entry fee transfer failed");
+            // Player loses: no payment required - completely free to play!
             tokenAmount = 0; // No reward for losing
-            emit EntryFeePaid(msg.sender, ENTRY_FEE);
-            emit PlayerLost(msg.sender, targetNumber, guess, ENTRY_FEE);
+            emit PlayerLost(msg.sender, targetNumber, guess);
         }
         
         // Store game result
@@ -117,10 +114,6 @@ contract NumberGuessingGame is Ownable, Pausable, ReentrancyGuard {
             playerWins ? tokenAmount : 0,
             block.timestamp
         );
-        
-        if (playerWins) {
-            emit RewardDistributed(msg.sender, tokenAmount);
-        }
     }
     
     /**
@@ -240,7 +233,7 @@ contract NumberGuessingGame is Ownable, Pausable, ReentrancyGuard {
      * @return Entry fee amount in tokens
      */
     function getEntryFee() external pure returns (uint256) {
-        return ENTRY_FEE;
+        return 0; // Free to play
     }
     
     /**

@@ -182,6 +182,30 @@ class Web3Service {
     }
   }
 
+  // Check if user has played any games
+  Future<int> getUserTotalGames() async {
+    if (_userAddress == null) return 0;
+
+    try {
+      _ensureInitialized();
+
+      final address = EthereumAddress.fromHex(_userAddress!);
+      final result = await _web3Client!.call(
+        contract: _gameContract!,
+        function: _gameContract!.function('getUserTotalGames'),
+        params: [address],
+      );
+
+      if (result.isNotEmpty) {
+        return (result.first as BigInt).toInt();
+      }
+      return 0;
+    } catch (e) {
+      developer.log('Error getting user total games: $e');
+      return 0;
+    }
+  }
+
   // Get user's latest game result
   Future<Map<String, dynamic>?> getLatestGameResult() async {
     if (_userAddress == null) return null;
@@ -209,6 +233,11 @@ class Web3Service {
       }
       return null;
     } catch (e) {
+      // Check if the error is specifically "no games played"
+      if (e.toString().contains('no games played')) {
+        developer.log('No games played yet by this user');
+        return null;
+      }
       developer.log('Error getting latest game result: $e');
       return null;
     }

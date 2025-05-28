@@ -207,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Guess a number between 0 and 100!\n🎯 Win: Within 20 points = receive 12.5-50 tokens\n💸 Lose: More than 20 points = pay 5 tokens entry fee\n\nTokens come from/go to the game owner!',
+              'Guess a number between 0 and 100!\n🎯 Win: Within 20 points = receive 12.5-50 tokens\n🆓 Lose: More than 20 points = nothing happens (FREE to play!)\n\nReward tokens come from the game owner!',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16),
             ),
@@ -237,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Enter a number between 0 and 100:\n\n💸 Entry Fee: 5 GUESS tokens (paid if you lose)\n🎯 Potential Reward: 12.5-50 GUESS tokens (received if you win)',
+                'Enter a number between 0 and 100:\n\n🆓 Entry Fee: FREE to play!\n🎯 Potential Reward: 12.5-50 GUESS tokens (received if you win)',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontWeight: FontWeight.w500),
               ),
@@ -375,11 +375,11 @@ class _HomeScreenState extends State<HomeScreen> {
               )
             else
               const Text(
-                'Entry Fee: -5 TOKEN',
+                '🆓 FREE TO PLAY - No payment required!',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.red,
+                  color: Colors.blue,
                 ),
               ),
             const SizedBox(height: 24),

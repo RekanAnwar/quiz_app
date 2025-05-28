@@ -227,6 +227,12 @@ class AppProvider with ChangeNotifier {
       // Wait a moment for blockchain state to update
       await Future.delayed(const Duration(seconds: 2));
 
+      // Check if user has played any games before trying to get result
+      final totalGames = await _web3Service.getUserTotalGames();
+      if (totalGames == 0) {
+        throw Exception('Game was played but no games found in user history');
+      }
+
       // Get the latest game result
       final latestResult = await _web3Service.getLatestGameResult();
       if (latestResult == null) {

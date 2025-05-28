@@ -14,9 +14,9 @@ class AppConstants {
   // Storage Keys
   static const String walletAddressKey = 'wallet_address';
 
-  // Contract Configuration - REAL DEPLOYED CONTRACTS ON SEPOLIA
+  // Contract Configuration - FREE-TO-PLAY CONTRACTS ON SEPOLIA
   static const String guessTokenContractAddress =
-      '0xa2a58aB44397df686067C2C7Cee8883C5dAf0e03'; // GuessToken (ERC-20)
+      '0x2AC923843d160A63877b83EC7bC69027C97bc45e'; // GuessToken (ERC-20)
   static const String gameContractAddress =
-      '0x647c9421FeA2f05a87Da16D927B5e6F7d5C0f667'; // NumberGuessingGame
+      '0x2a7081a264DDF15f9e43B237967F3599D743B0f5'; // NumberGuessingGame (Free-to-Play)
 }
