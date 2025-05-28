@@ -4,6 +4,8 @@
 
 The Web3 Number Guessing Game is a blockchain-based application built with Flutter and Solidity where players guess numbers between 0-100 and earn GUESS tokens based on their accuracy. The game leverages Ethereum smart contracts to handle game logic and token distribution in a transparent and decentralized manner. **The game is completely free-to-play** - players only receive rewards when they win, and there are no entry fees.
 
+**Architecture Note**: The current implementation uses a centralized transaction approach where all blockchain transactions are signed by a game manager's private key rather than individual user wallets. This provides a gasless gaming experience but has implications for true decentralization.
+
 ## Table of Contents
 
 1. [Architecture](#architecture)
@@ -41,7 +43,7 @@ The project follows a client-server architecture with:
 
 - **Client**: Flutter mobile application (guess_game)
 - **Backend**: Ethereum blockchain with smart contracts
-- **Integration**: Web3Dart library to connect the Flutter app with the blockchain
+- **Integration**: Web3Dart library with centralized transaction signing
 - **Network**: Deployed on Sepolia Testnet for testing
 
 ### High-Level Architecture Diagram
@@ -60,7 +62,24 @@ The project follows a client-server architecture with:
 |  (SharedPreferences)   |        | (Game Logic & Tokens)  |
 |                        |        |                        |
 +------------------------+        +------------------------+
+        |
+        v
++------------------------+
+|                        |
+|   Game Manager's       |
+|   Private Key          |
+|  (Centralized Signing) |
++------------------------+
 ```
+
+### Transaction Flow
+
+1. **User Input**: Player enters guess in Flutter app
+2. **Centralized Processing**: App uses game manager's private key to sign transaction
+3. **Blockchain Execution**: Smart contract processes game with game manager as `msg.sender`
+4. **Result Storage**: Game results stored under game manager's address
+5. **Reward Distribution**: Tokens distributed to intended user address (specified in contract call)
+6. **Local Tracking**: App maintains local record of user's games and results
 
 ## Frontend (Flutter)
 
@@ -195,23 +214,31 @@ The app uses the Provider pattern for centralized state management:
 
 ### Web3 Service
 
-`web3_service.dart` handles all blockchain interactions:
+`web3_service.dart` handles all blockchain interactions with a centralized approach:
 
 - **Connection Management**: Initializes Web3 client with Sepolia testnet
 - **Contract Interaction**: Loads and interacts with deployed smart contracts
-- **Wallet Integration**: Manages wallet connection state
-- **Transaction Processing**: Handles game transactions and confirmations
+- **Centralized Signing**: Uses a hardcoded game manager private key for all transactions
+- **Gasless Gaming**: Players don't need ETH or wallet setup - all gas fees paid by game manager
+- **Transaction Processing**: Handles game transactions and confirmations on behalf of users
 - **Error Handling**: Comprehensive error handling for blockchain operations
 - **Gas Management**: Appropriate gas limits for contract interactions
+
+**Key Implementation Details**:
+- All transactions signed with game manager's private key: `XXXXXXXXX`
+- Game manager address: `0xA720e09cfB31fcd03d74992373AEcF0818F111Af`
+- Users provide only their address for reward distribution
+- No wallet connection required from users
 
 ### Storage Service
 
 `storage_service.dart` manages local data persistence:
 
-- **Wallet Persistence**: Stores connected wallet address
+- **User Address Storage**: Stores user's Ethereum address for reward distribution
+- **Game History**: Local tracking of user's game results and statistics
 - **User Preferences**: Saves app settings and preferences
 - **Session Management**: Handles user session state
-- **Data Clearing**: Clean data removal when disconnecting wallet
+- **Data Clearing**: Clean data removal when user resets or changes address
 
 ## Deployment Information
 
@@ -345,12 +372,21 @@ To connect to the game, add Sepolia testnet to your wallet:
 
 ### Gameplay
 
-1. **Wallet Connection**: User connects Web3 wallet (no registration required)
-2. **Game Start**: User initiates a new game (completely free)
+1. **Address Input**: User provides their Ethereum address (no wallet connection needed)
+2. **Game Start**: User initiates a new game (completely free, no gas fees)
 3. **Number Input**: User enters a guess between 0-100
-4. **Blockchain Processing**: Smart contract generates random number and calculates results
-5. **Reward Distribution**: Winners automatically receive GUESS tokens
-6. **Result Display**: Game shows target number, difference, and reward earned
+4. **Centralized Processing**: App signs transaction with game manager's private key
+5. **Blockchain Processing**: Smart contract generates random number and calculates results
+6. **Reward Distribution**: Winners automatically receive GUESS tokens at their provided address
+7. **Result Display**: Game shows target number, difference, and reward earned
+
+### Transaction Architecture
+
+**Important**: All blockchain transactions are processed through the game manager's account:
+- **msg.sender**: Always the game manager (`0xA720e09cfB31fcd03d74992373AEcF0818F111Af`)
+- **Reward recipient**: User's provided address (specified in contract parameters)
+- **Game history**: Stored under game manager's address in smart contract
+- **User tracking**: Maintained locally in the Flutter app
 
 ### Reward Structure
 
@@ -427,30 +463,55 @@ The following development and testing scripts have been removed to keep the code
 
 ## Known Issues & Limitations
 
+### Architectural Limitations
+
+#### **Centralized Transaction Model**
+- **All transactions signed by game manager**: The app uses a single private key for all blockchain interactions
+- **User address mismatch**: Smart contract records all games under game manager's address, not individual users
+- **Local-only user tracking**: Individual user statistics are maintained only in the app, not on-chain
+- **Trust dependency**: Users must trust the game manager to distribute rewards correctly
+
+#### **Implications of Current Architecture**
+- **Not truly decentralized**: Despite using blockchain, the transaction model is centralized
+- **User game history**: `getLatestGameResult(userAddress)` will show "No games played" for individual users
+- **Reward distribution works**: Tokens are correctly sent to user addresses despite centralized signing
+- **Scalability concerns**: All gas costs borne by single game manager account
+
 ### Smart Contract Limitations
 - **Pseudo-Random Numbers**: Current implementation uses block-based randomness (not production-ready)
-- **Gas Costs**: Transaction fees apply for each game (use layer 2 for lower costs)
 - **Centralized Rewards**: Owner must fund the contract with tokens for rewards
+- **Game History Inconsistency**: Individual user addresses show zero games in contract queries
+- **Single Point of Failure**: Game manager's private key compromise would affect entire system
 
 ### Frontend Limitations
 - **Mobile Focus**: UI optimized primarily for mobile devices
-- **Wallet Support**: Limited to Web3-compatible wallets
+- **Address Input Required**: Users must manually provide Ethereum address
 - **Network Dependency**: Requires stable internet connection
+- **Local Data Dependency**: User statistics lost if app data is cleared
 
-### General Limitations
-- **Testnet Only**: Currently deployed on Sepolia testnet
-- **Token Distribution**: Manual token distribution to contract for rewards
+### Security Limitations
+- **Private Key Exposure**: Game manager's private key is embedded in the application code
+- **No User Authentication**: No verification that provided address belongs to the user
+- **Transaction Replay**: No protection against transaction replay attacks in current implementation
 
 ## Future Improvements
+
+### Critical Architecture Improvements
+- **True Wallet Integration**: Implement proper user wallet connection and individual transaction signing
+- **Gasless Solutions**: Use meta-transactions or account abstraction for gasless gaming while maintaining decentralization
+- **User Game History**: Modify smart contract to properly track individual user game histories
+- **Enhanced Security**: Remove private key from application code, implement secure key management
 
 ### Short-term Improvements
 - **Chainlink VRF Integration**: Implement truly random number generation
 - **Layer 2 Deployment**: Deploy on Polygon or Arbitrum for lower gas costs
 - **Improved UI**: Enhanced mobile and web responsiveness
+- **User Verification**: Add address ownership verification
 
 ### Medium-term Features
+- **Proper Decentralization**: Transition to individual user wallet interactions
 - **Multiplayer Games**: Real-time multiplayer guessing competitions
-- **Leaderboards**: Global and weekly leaderboards
+- **Leaderboards**: Global and weekly leaderboards (with proper on-chain tracking)
 - **Social Features**: Share results and challenge friends
 - **Achievement System**: Badges and achievements for milestones
 
@@ -459,4 +520,11 @@ The following development and testing scripts have been removed to keep the code
 - **NFT Integration**: Special NFT rewards for top performers
 - **Cross-chain Support**: Multi-chain deployment for broader accessibility
 - **Advanced Analytics**: Detailed player statistics and performance tracking
-- **Governance Token**: Community governance for game parameters 
+- **Governance Token**: Community governance for game parameters
+
+### Recommended Migration Path
+
+1. **Phase 1**: Implement proper wallet connection while maintaining gasless option
+2. **Phase 2**: Add meta-transaction support for truly gasless decentralized gaming
+3. **Phase 3**: Update smart contracts to properly track individual user histories
+4. **Phase 4**: Remove centralized transaction signing and migrate to full decentralization 
