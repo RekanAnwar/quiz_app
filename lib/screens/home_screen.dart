@@ -383,24 +383,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   const SizedBox(height: 16),
                   const Divider(),
                   const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _balanceCard(
-                          'ETH',
-                          appProvider.ethBalance.toStringAsFixed(4),
-                          const Color(0xFF4A90E2),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _balanceCard(
-                          'TOKENS',
-                          appProvider.tokenBalance.toStringAsFixed(2),
-                          const Color(0xFF7ED321),
-                        ),
-                      ),
-                    ],
+                  // Token balance only (no ETH needed for gasless gaming)
+                  _balanceCard(
+                    'GUESS TOKENS',
+                    appProvider.tokenBalance.toStringAsFixed(2),
+                    const Color(0xFF7ED321),
                   ),
                 ],
               ),
@@ -1038,8 +1025,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ],
               ),
               child: ElevatedButton(
-                onPressed: () {
-                  appProvider.clearLastGameResult();
+                onPressed: () async {
+                  await appProvider.clearLastGameResult();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,

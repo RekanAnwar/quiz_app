@@ -17,7 +17,6 @@ class AppProvider with ChangeNotifier {
 
   // Wallet state
   String? _walletAddress;
-  double _ethBalance = 0.0;
   double _tokenBalance = 0.0;
   bool _isWalletConnecting = false;
 
@@ -34,9 +33,8 @@ class AppProvider with ChangeNotifier {
   String? get walletAddress => _walletAddress;
   String? get formattedWalletAddress =>
       _walletAddress != null
-          ? _web3Service.formatAddress(_walletAddress!)
+          ? '${_walletAddress!.substring(0, 6)}...${_walletAddress!.substring(_walletAddress!.length - 4)}'
           : null;
-  double get ethBalance => _ethBalance;
   double get tokenBalance => _tokenBalance;
   bool get isWalletConnected => _walletAddress != null;
   bool get isWalletConnecting => _isWalletConnecting;
@@ -76,26 +74,8 @@ class AppProvider with ChangeNotifier {
       if (savedAddress != null) {
         await connectWallet(savedAddress, updateBalance: true);
       }
-
-      // Check for incomplete game
-      await _checkForIncompleteGame();
     } catch (e) {
       developer.log('Error loading saved data: $e');
-    }
-  }
-
-  // Check for incomplete game and offer to resume
-  Future<void> _checkForIncompleteGame() async {
-    try {
-      if (await _storageService.hasRecentTemporaryGameState()) {
-        final state = await _storageService.getTemporaryGameState();
-        if (state != null) {
-          // Game can be resumed - this would typically show a dialog to the user
-          developer.log('Found incomplete game that can be resumed');
-        }
-      }
-    } catch (e) {
-      developer.log('Error checking for incomplete game: $e');
     }
   }
 
@@ -118,7 +98,7 @@ class AppProvider with ChangeNotifier {
       await _storageService.setWalletAddress(address);
 
       if (updateBalance) {
-        await _updateBalances();
+        await _updateBalance();
       }
 
       _setError(null);
@@ -135,16 +115,13 @@ class AppProvider with ChangeNotifier {
     try {
       _web3Service.disconnect();
       _walletAddress = null;
-      _ethBalance = 0.0;
       _tokenBalance = 0.0;
 
       await _storageService.removeWalletAddress();
       await _storageService.clearUserData();
 
-      // Clear game state if in progress
-      if (_isGameInProgress) {
-        await _clearGameState();
-      }
+      // Clear game state
+      _clearGameState();
 
       notifyListeners();
     } catch (e) {
@@ -152,45 +129,16 @@ class AppProvider with ChangeNotifier {
     }
   }
 
-  // Update wallet balances
-  Future<void> _updateBalances() async {
-    try {
-      final futures = await Future.wait([
-        _web3Service.getEthBalance(),
-        _web3Service.getTokenBalance(),
-      ]);
-
-      _ethBalance = futures[0];
-      _tokenBalance = futures[1];
-
-      notifyListeners();
-    } catch (e) {
-      developer.log('Error updating balances: $e');
-    }
-  }
-
   // Start a new game
-  Future<void> startGame() async {
+  void startGame() {
     if (_walletAddress == null) {
       _setError('Please connect your wallet first');
       return;
     }
 
-    try {
-      _setError(null);
-      _isGameInProgress = true;
-
-      // Save temporary game state
-      await _storageService.saveTemporaryGameState(
-        walletAddress: _walletAddress!,
-        isInProgress: true,
-        timestamp: DateTime.now(),
-      );
-
-      notifyListeners();
-    } catch (e) {
-      _setError(e.toString());
-    }
+    _setError(null);
+    _isGameInProgress = true;
+    notifyListeners();
   }
 
   // Play the number guessing game
@@ -207,83 +155,103 @@ class AppProvider with ChangeNotifier {
       // Call the smart contract to play the game
       final txHash = await _web3Service.playGame(guess);
 
-      // Wait for transaction confirmation
-      bool isConfirmed = false;
-      int attempts = 0;
-      const maxAttempts = 30; // Wait up to 30 seconds
-
-      while (!isConfirmed && attempts < maxAttempts) {
-        await Future.delayed(const Duration(seconds: 1));
-        isConfirmed = await _web3Service.isTransactionConfirmed(txHash!);
-        attempts++;
-      }
-
-      if (!isConfirmed) {
-        throw Exception(
-          'Transaction not confirmed after timeout. Check Etherscan: $txHash',
-        );
-      }
+      developer.log('Game transaction sent: $txHash');
 
       // Wait a moment for blockchain state to update
-      await Future.delayed(const Duration(seconds: 2));
+      await Future.delayed(const Duration(seconds: 3));
 
-      // Check if user has played any games before trying to get result
-      final totalGames = await _web3Service.getUserTotalGames();
-      if (totalGames == 0) {
-        throw Exception('Game was played but no games found in user history');
-      }
+      // Always try to update balance after a game (regardless of result retrieval)
+      await _updateBalanceWithRetry();
 
-      // Get the latest game result
+      // Try to get the latest game result
       final latestResult = await _web3Service.getLatestGameResult();
-      if (latestResult == null) {
-        throw Exception('Could not retrieve game result from blockchain');
+
+      if (latestResult != null) {
+        final result = GameResult(
+          targetNumber: latestResult['targetNumber'] as int,
+          userGuess: latestResult['userGuess'] as int,
+          difference: latestResult['difference'] as int,
+          rewardAmount: latestResult['rewardAmount'] as double,
+          timestamp: DateTime.fromMillisecondsSinceEpoch(
+            (latestResult['timestamp'] as int) * 1000,
+          ),
+        );
+
+        _lastGameResult = result;
+      } else {
+        developer.log(
+          'Could not retrieve game result immediately, but transaction was sent',
+        );
+        // Try again after a longer delay
+        await Future.delayed(const Duration(seconds: 2));
+        await _updateBalanceWithRetry();
       }
-
-      final result = GameResult(
-        targetNumber: latestResult['targetNumber'] as int,
-        userGuess: latestResult['userGuess'] as int,
-        difference: latestResult['difference'] as int,
-        rewardAmount: latestResult['rewardAmount'] as double,
-        timestamp: DateTime.fromMillisecondsSinceEpoch(
-          (latestResult['timestamp'] as int) * 1000,
-        ),
-      );
-
-      _lastGameResult = result;
-
-      // Update balances
-      await _updateBalances();
-
-      // Clear temporary game state
-      await _storageService.clearTemporaryGameState();
 
       _isGameInProgress = false;
       notifyListeners();
     } catch (e) {
       _setError('Failed to play game: $e');
+      _isGameInProgress = false;
+      // Still try to update balance in case the transaction went through
+      await _updateBalanceWithRetry();
     } finally {
       _setLoading(false);
     }
   }
 
+  // Update token balance with retry logic
+  Future<void> _updateBalanceWithRetry() async {
+    for (int attempt = 0; attempt < 3; attempt++) {
+      try {
+        await _updateBalance();
+        break; // Success, exit retry loop
+      } catch (e) {
+        developer.log('Balance update attempt ${attempt + 1} failed: $e');
+        if (attempt < 2) {
+          await Future.delayed(Duration(seconds: attempt + 1));
+        }
+      }
+    }
+  }
+
+  // Update token balance
+  Future<void> _updateBalance() async {
+    try {
+      _tokenBalance = await _web3Service.getTokenBalance();
+      notifyListeners();
+    } catch (e) {
+      developer.log('Error updating token balance: $e');
+    }
+  }
+
   // End the current game
   void endGame() {
-    _isGameInProgress = false;
-    _storageService.clearTemporaryGameState();
+    _clearGameState();
+  }
+
+  // Clear last game result and refresh balance
+  Future<void> clearLastGameResult() async {
+    _lastGameResult = null;
+    // Refresh balance when starting a new game session
+    await _updateBalanceWithRetry();
     notifyListeners();
   }
 
-  // Clear last game result
-  void clearLastGameResult() {
-    _lastGameResult = null;
-    notifyListeners();
+  // Manual balance refresh (can be called from UI)
+  Future<void> refreshBalance() async {
+    if (_walletAddress == null) return;
+
+    try {
+      await _updateBalanceWithRetry();
+    } catch (e) {
+      developer.log('Error refreshing balance: $e');
+    }
   }
 
   // Clear game state
-  Future<void> _clearGameState() async {
+  void _clearGameState() {
     _isGameInProgress = false;
     _lastGameResult = null;
-    await _storageService.clearTemporaryGameState();
     notifyListeners();
   }
 

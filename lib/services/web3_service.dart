@@ -75,27 +75,6 @@ class Web3Service {
     return hexPattern.hasMatch(hexPart);
   }
 
-  // Get ETH balance
-  Future<double> getEthBalance() async {
-    if (_userAddress == null) return 0.0;
-
-    try {
-      _ensureInitialized();
-
-      final address = EthereumAddress.fromHex(_userAddress!);
-      final balance = await _web3Client!.getBalance(address);
-
-      // Convert from Wei to ETH
-      final ethBalance = balance.getValueInUnit(EtherUnit.ether);
-      developer.log('ETH Balance: $ethBalance');
-
-      return ethBalance;
-    } catch (e) {
-      developer.log('Error getting ETH balance: $e');
-      return 0.0;
-    }
-  }
-
   // Get token balance
   Future<double> getTokenBalance() async {
     if (_userAddress == null) return 0.0;
@@ -253,43 +232,6 @@ class Web3Service {
       developer.log('Error getting latest game result: $e');
       return null;
     }
-  }
-
-  // Get transaction status
-  Future<bool> isTransactionConfirmed(String txHash) async {
-    if (_web3Client == null) return false;
-
-    try {
-      // Get transaction receipt
-      final receipt = await _web3Client!.getTransactionReceipt(txHash);
-
-      if (receipt == null) {
-        // Transaction not yet mined
-        return false;
-      }
-
-      // Check if transaction was successful (status = 1)
-      final isSuccessful = receipt.status == true;
-
-      // Also check if it has enough confirmations (at least 1 block)
-      final currentBlock = await _web3Client!.getBlockNumber();
-      final confirmations = currentBlock - receipt.blockNumber.blockNum;
-
-      developer.log(
-        'Transaction $txHash: successful=$isSuccessful, confirmations=$confirmations',
-      );
-
-      return isSuccessful && confirmations >= 1;
-    } catch (e) {
-      developer.log('Error checking transaction status: $e');
-      return false;
-    }
-  }
-
-  // Format address for display (show first 6 and last 4 characters)
-  String formatAddress(String address) {
-    if (address.length < 10) return address;
-    return '${address.substring(0, 6)}...${address.substring(address.length - 4)}';
   }
 
   // Disconnect wallet
