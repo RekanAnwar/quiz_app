@@ -19,17 +19,21 @@ The Web3 Number Guessing Game is a blockchain-based application built with Flutt
 4. [Integration Layer](#integration-layer)
    - [Web3 Service](#web3-service)
    - [Storage Service](#storage-service)
-5. [Getting Started](#getting-started)
+5. [Deployment Information](#deployment-information)
+   - [Live Deployment Details](#live-deployment-details)
+   - [Contract Addresses](#contract-addresses)
+   - [Network Configuration](#network-configuration)
+6. [Getting Started](#getting-started)
    - [Prerequisites](#prerequisites)
    - [Installation](#installation)
    - [Deployment](#deployment)
-6. [Game Mechanics](#game-mechanics)
+7. [Game Mechanics](#game-mechanics)
    - [Gameplay](#gameplay)
    - [Reward Structure](#reward-structure)
-7. [Development Scripts](#development-scripts)
-8. [Testing](#testing)
-9. [Known Issues & Limitations](#known-issues--limitations)
-10. [Future Improvements](#future-improvements)
+8. [Development Scripts](#development-scripts)
+9. [Testing](#testing)
+10. [Known Issues & Limitations](#known-issues--limitations)
+11. [Future Improvements](#future-improvements)
 
 ## Architecture
 
@@ -209,6 +213,69 @@ The app uses the Provider pattern for centralized state management:
 - **Session Management**: Handles user session state
 - **Data Clearing**: Clean data removal when disconnecting wallet
 
+## Deployment Information
+
+### 🌐 **Live Deployment Details**
+
+The Web3 Number Guessing Game is currently deployed on **Sepolia Testnet** with the following configuration:
+
+#### **🔗 Contract Addresses**
+
+| Contract | Address | Purpose |
+|----------|---------|---------|
+| ** (ERC-20)** | `0x2AC923843d160A63877b83EC7bC69027C97bc45e` | GUESS token rewards |
+| **NumberGuessingGame** | `0x2a7081a264DDF15f9e43B237967F3599D743B0f5` | Main game logic |
+
+#### **🌍 Network Configuration**
+
+| Parameter | Value |
+|-----------|-------|
+| **Network Name** | Sepolia Testnet |
+| **Chain ID** | 11155111 |
+| **RPC URL** | `https://ethereum-sepolia-rpc.publicnode.com` |
+| **Currency Symbol** | ETH |
+| **Block Explorer** | [https://sepolia.etherscan.io](https://sepolia.etherscan.io) |
+
+#### **🔍 View Contracts on Block Explorer**
+
+- **GuessToken Contract**: [https://sepolia.etherscan.io/address/0x2AC923843d160A63877b83EC7bC69027C97bc45e](https://sepolia.etherscan.io/address/0x2AC923843d160A63877b83EC7bC69027C97bc45e)
+- **Game Contract**: [https://sepolia.etherscan.io/address/0x2a7081a264DDF15f9e43B237967F3599D743B0f5](https://sepolia.etherscan.io/address/0x2a7081a264DDF15f9e43B237967F3599D743B0f5)
+
+#### **💰 Get Testnet Tokens**
+
+To play the game, you need Sepolia ETH for gas fees:
+
+| Faucet | URL | Daily Limit |
+|--------|-----|-------------|
+| **Sepolia Faucet** | [https://sepoliafaucet.com](https://sepoliafaucet.com) | 0.5 ETH |
+| **Alchemy Faucet** | [https://sepoliafaucet.net](https://sepoliafaucet.net) | 0.5 ETH |
+| **QuickNode Faucet** | [https://faucet.quicknode.com/ethereum/sepolia](https://faucet.quicknode.com/ethereum/sepolia) | 0.1 ETH |
+
+#### **📱 Add Sepolia Network to MetaMask**
+
+To connect to the game, add Sepolia testnet to your wallet:
+
+```json
+{
+  "networkName": "Sepolia Testnet",
+  "rpcUrl": "https://ethereum-sepolia-rpc.publicnode.com",
+  "chainId": "11155111",
+  "symbol": "ETH",
+  "explorerUrl": "https://sepolia.etherscan.io"
+}
+```
+
+**Quick Add Button**: [Add Sepolia to MetaMask](https://chainlist.org/chain/11155111)
+
+#### **🎮 Ready to Play?**
+
+1. ✅ Add Sepolia network to your wallet
+2. ✅ Get some Sepolia ETH from faucets above
+3. ✅ Download the Flutter app
+4. ✅ Connect your wallet and start guessing!
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -217,7 +284,7 @@ The app uses the Provider pattern for centralized state management:
 - **Node.js**: 16.0 or higher
 - **Git**: For version control
 - **Ethereum Wallet**: MetaMask or compatible Web3 wallet
-- **Sepolia ETH**: For testing transactions (free from faucets)
+- **Sepolia ETH**: For testing transactions (free from faucets above)
 
 ### Installation
 
